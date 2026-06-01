@@ -1,0 +1,779 @@
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">LPL<span>Local Premier League</span></div>
+    <nav class="nav-links">
+      <button class="nav-link active" onclick="showPage('home',this)">Home</button>
+      <button class="nav-link" onclick="showPage('season',this)">Season Stats</button>
+      <button class="nav-link" onclick="showPage('matches',this)">Matches</button>
+      <button class="nav-link" onclick="showPage('records',this)">Records</button>
+      <button class="nav-link" onclick="showPage('h2h',this)">Head to Head</button>
+      <button class="nav-link" onclick="showPage('teams',this)">Teams</button>
+      <button class="nav-link" onclick="showPage('archives',this)">Archives</button>
+      <button class="nav-link" id="loginBtn" onclick="showPage('login',this)" style="display:none;">Login</button>
+      <button class="nav-link" id="addMatchBtn" onclick="openAdminPanel(this)" style="display:none;color:var(--gold);border-bottom-color:transparent;">+ Add Match</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ════ PAGE: HOME ════ -->
+<div class="page active" id="page-home">
+  <div class="home-hero">
+    <div class="home-hero-grid"></div>
+    <div class="home-hero-accent"></div>
+    <div class="home-hero-vert-line"></div>
+    <div class="home-hero-watermark">LPL</div>
+    <div class="home-hero-inner">
+      <div class="home-hero-main">
+        <div class="home-season-tag">
+          <span class="home-season-tag-line"></span>
+          <span class="home-season-tag-text">LPL · Season 1 · 2025</span>
+        </div>
+        <div class="home-title-block">
+          <span class="home-title-main">LOCAL</span>
+          <span class="home-title-accent">PREMIER</span>
+          <span class="home-title-dim">LEAGUE</span>
+        </div>
+        <div class="home-subtitle">Ten franchises. One hundred and ten players. The most competitive local cricket tournament ever staged.</div>
+        <div class="home-cta-row">
+          <button class="home-cta-btn home-cta-primary" onclick="document.querySelectorAll('.nav-link')[2].click()">View Matches</button>
+          <button class="home-cta-btn home-cta-secondary" onclick="document.querySelectorAll('.nav-link')[5].click()">Browse Teams</button>
+        </div>
+      </div>
+      <div class="home-hero-aside" id="homeHeroAside">
+        <div class="home-aside-card" id="homeAsideLeader">
+          <div class="home-aside-label">Season Leader — Batting</div>
+          <div class="home-aside-stat-row"><span class="home-aside-stat-key">Player</span><span class="home-aside-stat-val" id="asideTopBatName">—</span></div>
+          <div class="home-aside-stat-row"><span class="home-aside-stat-key">Runs</span><span class="home-aside-stat-val" id="asideTopBatRuns">—</span></div>
+        </div>
+        <div class="home-aside-card">
+          <div class="home-aside-label">Season Leader — Bowling</div>
+          <div class="home-aside-stat-row"><span class="home-aside-stat-key">Player</span><span class="home-aside-stat-val" id="asideTopBowlName">—</span></div>
+          <div class="home-aside-stat-row"><span class="home-aside-stat-key">Wickets</span><span class="home-aside-stat-val" id="asideTopBowlWkts">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="home-stats-strip" id="homeStatsStrip">
+    <div class="home-strip-item"><span class="home-strip-num" data-target="10">0</span><span class="home-strip-lbl">Franchises</span></div>
+    <div class="home-strip-item"><span class="home-strip-num" data-target="110">0</span><span class="home-strip-lbl">Players</span></div>
+    <div class="home-strip-item"><span class="home-strip-num" id="homeMatchesPlayed">0</span><span class="home-strip-lbl">Matches Played</span></div>
+    <div class="home-strip-item"><span class="home-strip-num" id="homeRunsScored">0</span><span class="home-strip-lbl">Runs Scored</span></div>
+  </div>
+
+  <!-- IN-PROGRESS LIVE MATCH BANNER (home page mirror) -->
+  <div style="max-width:1440px;margin:0 auto;padding:32px 48px 0 48px;">
+    <div id="inProgressMatchBannerHome" style="display:none;"></div>
+  </div>
+
+  <div class="home-section-wrap">
+    <div class="home-section-header">
+      <div class="home-section-title-group">
+        <span class="home-section-rule"></span>
+        <span class="home-section-title">Season Highlights</span>
+      </div>
+    </div>
+    <div class="home-highlights-grid" id="homeHighlights"></div>
+  </div>
+
+  <div class="home-section-wrap">
+    <div class="home-section-header">
+      <div class="home-section-title-group">
+        <span class="home-section-rule"></span>
+        <span class="home-section-title">Top Performers</span>
+      </div>
+    </div>
+    <div class="home-perf-grid" id="homeTopPerf"></div>
+  </div>
+
+  <div class="home-section-wrap">
+    <div class="home-section-header">
+      <div class="home-section-title-group">
+        <span class="home-section-rule"></span>
+        <span class="home-section-title">Franchises</span>
+      </div>
+    </div>
+    <div class="home-teams-scroll" id="homeTeamsScroll"></div>
+  </div>
+
+  <div class="home-footer">
+    <div style="font-family:'Bebas Neue',cursive;font-size:20px;letter-spacing:6px;color:var(--gold)">LPL</div>
+    <div class="home-footer-divider"></div>
+    <div style="font-size:9px;color:rgba(255,255,255,.22);letter-spacing:3px;margin-top:14px;text-transform:uppercase">Local Premier League &middot; Season 1</div>
+  </div>
+</div>
+
+<!-- ════ PAGE: SEASON STATS ════ -->
+<div class="page" id="page-season">
+  <div class="hero-banner" id="heroBanner">
+    <div class="hero-bg-grid"></div>
+    <div class="hero-glow" id="heroGlow"></div>
+    <div class="hero-inner">
+      <div class="hero-rank-bg">1</div>
+      <div class="hero-av" id="heroAv"></div>
+      <div class="hero-info">
+        <div class="cap-badge" id="capBadge"></div>
+        <div class="hero-name" id="heroName">—</div>
+        <div class="hero-team-lbl" id="heroTeamLbl">—</div>
+        <div class="hero-stats-row" id="heroStatsRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-tabs">
+    <button class="stab active" id="stab0" onclick="setStat(0,this)">Orange Cap</button>
+    <button class="stab" id="stab1" onclick="setStat(1,this)">Purple Cap</button>
+    <button class="stab" id="stab2" onclick="setStat(2,this)">Super Strikers</button>
+    <button class="stab" id="stab3" onclick="setStat(3,this)">Highest Scores</button>
+    <button class="stab" id="stab4" onclick="setStat(4,this)">Most Wickets</button>
+    <button class="stab" id="stab5" onclick="setStat(5,this)">MVPs</button>
+  </div>
+
+  <div class="filters-bar">
+    <div class="filters-inner">
+      <select class="fsel" id="fTeam" onchange="renderStat()">
+        <option value="">All Teams</option>
+      </select>
+      <input class="fsearch" id="fSearch" placeholder="Search player…" oninput="renderStat()">
+      <span id="statNote" style="font-size:11px;color:var(--silver);letter-spacing:1px;margin-left:8px"></span>
+    </div>
+  </div>
+  <div class="lb-wrap" id="statContainer"></div>
+</div>
+
+<!-- ════ PAGE: RECORDS ════ -->
+<div class="page" id="page-records">
+  <div class="rpage" id="recContent"></div>
+</div>
+
+<!-- ════ PAGE: HEAD TO HEAD ════ -->
+<div class="page" id="page-h2h">
+  <div class="h2hpage">
+    <div class="ptitle">Head to Head</div>
+    <div class="psub">Select two players to compare their attributes side by side</div>
+    <div class="h2h-row">
+      <div class="slot" id="slotA" onclick="openPick('A')">
+        <div class="slot-plus">+</div>
+        <div style="font-size:12px;color:var(--silver);letter-spacing:2px;text-transform:uppercase">Select Player</div>
+      </div>
+      <div style="text-align:center"><div class="vs-box">VS</div></div>
+      <div class="slot" id="slotB" onclick="openPick('B')">
+        <div class="slot-plus">+</div>
+        <div style="font-size:12px;color:var(--silver);letter-spacing:2px;text-transform:uppercase">Select Player</div>
+      </div>
+    </div>
+    <div class="h2h-cmp" id="h2hCmp"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE: TEAMS ════ -->
+<div class="page" id="page-teams">
+  <div class="tpage">
+    <div class="ptitle">Teams</div>
+    <div class="psub" style="margin-bottom:28px">LPL Season 1 · 10 Franchises · Click a team to view squad</div>
+    <div class="tgrid" id="teamsGrid"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE: ARCHIVES ════ -->
+<div class="page" id="page-archives">
+  <div class="rpage">
+    <div class="ptitle">Archives</div>
+    <div class="psub">Completed seasons are frozen here as immutable historical snapshots.</div>
+    <div id="archivesContent">
+      <div style="color:var(--silver);font-size:13px;">Loading archived seasons…</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════ PAGE: LOGIN ════ -->
+<div class="page" id="page-login">
+  <div class="login-wrap">
+    <h2>Admin Access</h2>
+    <p>Enter the admin password to unlock the hidden LPL control panel.</p>
+    <div class="login-row">
+      <label for="loginInput">Admin password</label>
+      <input id="loginInput" type="password" placeholder="Enter admin password" autocomplete="current-password">
+    </div>
+    <div class="login-actions">
+      <button class="cancel-btn" onclick="showPage('home',document.querySelector('.nav-link'))">Back</button>
+      <button class="login-btn" onclick="loginUser()">Unlock</button>
+    </div>
+    <div class="login-status" id="loginStatus"></div>
+  </div>
+</div>
+
+
+<!-- ════ PAGE: MATCHES ════ -->
+<div class="page" id="page-matches">
+  <div class="mpage-wrap">
+    <!-- IN-PROGRESS LIVE MATCH BANNER (shown when a live session exists) -->
+    <div id="inProgressMatchBanner" style="display:none;margin-bottom:24px;"></div>
+    <!-- PLAYOFF STAGE BANNER (shown once league stage completes) -->
+    <div id="playoffStageBanner" style="display:none;margin-bottom:20px;">
+      <div class="playoff-stage-inner">
+        <div class="playoff-stage-icon">🏆</div>
+        <div class="playoff-stage-text">
+          <div class="playoff-stage-title">Playoff Stage</div>
+          <div class="playoff-stage-sub" id="playoffStageSub">Top 4 teams qualify · League stage complete</div>
+        </div>
+        <div class="playoff-stage-badge">PLAYOFFS LIVE</div>
+      </div>
+    </div>
+    <div class="mpage-title">Matches</div>
+    <div class="mpage-sub">LPL Season 1 · 10 Franchises · Mixed Men & Women</div>
+    <div class="mtabs-row">
+      <button class="mtab active" onclick="showMTab('fixtures',this)">Fixtures</button>
+      <button class="mtab" onclick="showMTab('results',this)">Results</button>
+      <button class="mtab" onclick="showMTab('points',this)">Points Table</button>
+      <button class="mtab" onclick="showMTab('playoffs',this)">Playoffs</button>
+    </div>
+    <div class="msection active" id="ms-fixtures" style="padding-top:28px;"></div>
+    <div class="msection" id="ms-results" style="padding-top:28px;"></div>
+    <div class="msection" id="ms-points" style="padding-top:28px;"></div>
+    <div class="msection" id="ms-playoffs" style="padding-top:28px;"></div>
+  </div>
+</div>
+
+<!-- Scorecard modal -->
+<div class="sc-overlay" id="scOverlay">
+  <div class="sc-inner" id="scInner"></div>
+</div>
+
+<!-- Squad modal -->
+<div class="sqoverlay" id="sqModal">
+  <div class="sqinner">
+    <div class="sqhead" id="sqHead">
+      <div>
+        <div id="sqTName" style="font-family:'Bebas Neue',cursive;font-size:40px;"></div>
+        <div id="sqTFull" style="font-size:12px;color:rgba(255,255,255,.6);letter-spacing:2px;text-transform:uppercase;"></div>
+      </div>
+      <button class="sqclose" onclick="closeSq()">✕</button>
+    </div>
+    <div class="sqgrid" id="sqGrid"></div>
+  </div>
+</div>
+
+<!-- Player picker modal -->
+<div class="moverlay" id="pickModal">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Select Player</div>
+      <button class="mclose" onclick="closePick()">✕</button>
+    </div>
+    <div class="msearch"><input id="pickQ" placeholder="Search players…" oninput="filterPick()"></div>
+    <div class="mlist" id="pickList"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE: MATCH ENTRY (ADMIN) ════ -->
+<div class="page" id="page-entry">
+  <div class="adm-shell">
+
+    <!-- TOP BAR -->
+    <div class="adm-topbar">
+      <div class="adm-topbar-left">
+        <div class="adm-logo">LPL <span>Admin</span></div>
+        <div class="adm-next-pill" id="adminNextFixture">Loading…</div>
+      </div>
+      <button class="adm-close-btn" onclick="closeAdminPanel()">✕ Close</button>
+    </div>
+
+    <!-- NAV TABS -->
+    <div class="adm-nav">
+      <button class="adm-nav-btn active" data-section="match" onclick="selectAdminSection('match',this)">
+        <span class="adm-nav-icon">✦</span> Match Entry
+      </button>
+      <button class="adm-nav-btn" data-section="fixtures" onclick="selectAdminSection('fixtures',this)">
+        <span class="adm-nav-icon">☷</span> Fixtures
+      </button>
+      <button class="adm-nav-btn" data-section="teams" onclick="selectAdminSection('teams',this)">
+        <span class="adm-nav-icon">⬡</span> Teams
+      </button>
+      <button class="adm-nav-btn" data-section="players" onclick="selectAdminSection('players',this)">
+        <span class="adm-nav-icon">◉</span> Players
+      </button>
+      <button class="adm-nav-btn" data-section="seasons" onclick="selectAdminSection('seasons',this)">
+        <span class="adm-nav-icon">◇</span> Seasons
+      </button>
+      <button class="adm-nav-btn" data-section="backup" onclick="selectAdminSection('backup',this)">
+        <span class="adm-nav-icon">⬇</span> Export
+      </button>
+      <button class="adm-nav-btn" data-section="import" onclick="selectAdminSection('import',this)">
+        <span class="adm-nav-icon">⬆</span> Import
+      </button>
+    </div>
+
+    <!-- ══ SECTION: MATCH ENTRY ══ -->
+    <div class="adm-section active" id="adminSectionMatch">
+
+      <!-- PLAYOFF GUARD NOTICE (shown once playoffs begin) -->
+      <div class="admin-playoffs-guard" id="adminPlayoffsGuard">
+        🏆 <strong>PLAYOFF STAGE ACTIVE</strong> — League stage is complete and frozen.
+        Use the <strong>Playoff fixtures</strong> in the Fixtures tab to enter playoff matches.
+        League matches are locked.
+      </div>
+
+      <!-- FIXTURE LOCK BANNER -->
+      <div class="adm-fixture-banner" id="apFixtureBanner">
+        <div class="adm-fixture-vs" id="apFixtureTeams">No fixture selected</div>
+        <div class="adm-fixture-meta" id="apFixtureMeta">Go to Fixtures tab to set the schedule</div>
+        <button class="adm-ghost-btn" style="margin-left:auto;flex-shrink:0;" onclick="selectAdminSection('fixtures',document.querySelector('[data-section=fixtures]'))">Edit Fixtures</button>
+      </div>
+
+      <!-- MODE SELECTOR -->
+      <div class="adm-mode-row">
+        <button class="adm-mode-btn active" data-mode="quick" onclick="admSelectMode('quick',this)">
+          <div class="adm-mode-letter">A</div>
+          <div><div class="adm-mode-title">Quick Scorecard</div><div class="adm-mode-sub">Fill innings tables manually</div></div>
+        </button>
+        <button class="adm-mode-btn" data-mode="paste" onclick="admSelectMode('paste',this)">
+          <div class="adm-mode-letter">B</div>
+          <div><div class="adm-mode-title">Smart Paste</div><div class="adm-mode-sub">Paste any format — AI parses it</div></div>
+        </button>
+        <button class="adm-mode-btn" data-mode="live" onclick="admSelectMode('live',this)">
+          <div class="adm-mode-letter">C</div>
+          <div><div class="adm-mode-title">Ball by Ball</div><div class="adm-mode-sub">Score live, ball by ball</div></div>
+        </button>
+      </div>
+
+      <!-- MODE A: QUICK SCORECARD -->
+      <div class="adm-mode-pane active" id="admModeQuick">
+        <div class="adm-card">
+          <!-- Step indicator -->
+          <div class="adm-steps" id="admStepIndicator">
+            <div class="adm-step active" id="estep0">1 · Match Info</div>
+            <div class="adm-step-line"></div>
+            <div class="adm-step" id="estep1">2 · 1st Innings</div>
+            <div class="adm-step-line"></div>
+            <div class="adm-step" id="estep2">3 · 2nd Innings</div>
+            <div class="adm-step-line"></div>
+            <div class="adm-step" id="estep3">4 · Result</div>
+          </div>
+
+          <!-- STEP 0: Match Info -->
+          <div class="adm-step-body active" id="ebody0">
+            <div class="adm-section-label">Match Information</div>
+            <div class="adm-field-grid">
+              <div class="adm-field"><label class="adm-lbl">Match #</label><input class="adm-inp" id="ef_matchid" type="number" readonly placeholder="Auto" style="opacity:.4;"></div>
+              <div class="adm-field"><label class="adm-lbl">Venue</label><input class="adm-inp" id="ef_venue" value="LPL Arena"></div>
+              <div class="adm-field"><label class="adm-lbl">Date</label><input class="adm-inp" id="ef_date" placeholder="e.g. 14 May 2025"></div>
+            </div>
+            <div class="adm-field-grid" style="margin-top:14px;">
+              <div class="adm-field">
+                <label class="adm-lbl">Team 1 — Batting 1st</label>
+                <select class="adm-inp" id="ef_t1" onchange="onTeamChange()" disabled><option value="">— locked from fixture —</option></select>
+              </div>
+              <div class="adm-field">
+                <label class="adm-lbl">Team 2 — Batting 2nd</label>
+                <select class="adm-inp" id="ef_t2" onchange="onTeamChange()" disabled><option value="">— locked from fixture —</option></select>
+              </div>
+            </div>
+            <div class="adm-nav-row"><span></span><button class="adm-btn-primary" onclick="entryNext(0)">1st Innings →</button></div>
+          </div>
+
+          <!-- STEP 1: 1st Innings -->
+          <div class="adm-step-body" id="ebody1">
+            <div class="adm-section-label" id="inn1_title">1st Innings — Batting</div>
+            <div class="adm-innings-note">Player names auto-suggest from squad. Leave unused rows blank.</div>
+            <div class="adm-table-wrap" id="inn1_bat"></div>
+            <button class="adm-add-row" onclick="addBatRow('inn1')">+ Add Batter</button>
+            <div class="adm-section-label" style="margin-top:28px;" id="inn1_bowl_title">1st Innings — Bowling</div>
+            <div class="adm-table-wrap" id="inn1_bowl"></div>
+            <button class="adm-add-row" onclick="addBowlRow('inn1')">+ Add Bowler</button>
+            <div class="adm-extras-row">
+              <div class="adm-extras-item"><label class="adm-lbl">Extras</label><input class="adm-inp" id="inn1_extras" type="number" value="0" style="width:80px;"></div>
+              <div class="adm-extras-item"><label class="adm-lbl">Total (auto)</label><input class="adm-inp" id="inn1_total_disp" readonly style="width:130px;opacity:.5;"></div>
+              <div class="adm-extras-item"><label class="adm-lbl">Overs</label><input class="adm-inp" id="inn1_overs" placeholder="20" style="width:70px;"></div>
+            </div>
+            <div class="adm-nav-row"><button class="adm-btn-sec" onclick="entryPrev(1)">← Back</button><button class="adm-btn-primary" onclick="entryNext(1)">2nd Innings →</button></div>
+          </div>
+
+          <!-- STEP 2: 2nd Innings -->
+          <div class="adm-step-body" id="ebody2">
+            <div class="adm-section-label" id="inn2_title">2nd Innings — Batting</div>
+            <div class="adm-innings-note">Enter players who batted.</div>
+            <div class="adm-table-wrap" id="inn2_bat"></div>
+            <button class="adm-add-row" onclick="addBatRow('inn2')">+ Add Batter</button>
+            <div class="adm-section-label" style="margin-top:28px;" id="inn2_bowl_title">2nd Innings — Bowling</div>
+            <div class="adm-table-wrap" id="inn2_bowl"></div>
+            <button class="adm-add-row" onclick="addBowlRow('inn2')">+ Add Bowler</button>
+            <div class="adm-extras-row">
+              <div class="adm-extras-item"><label class="adm-lbl">Extras</label><input class="adm-inp" id="inn2_extras" type="number" value="0" style="width:80px;"></div>
+              <div class="adm-extras-item"><label class="adm-lbl">Total (auto)</label><input class="adm-inp" id="inn2_total_disp" readonly style="width:130px;opacity:.5;"></div>
+              <div class="adm-extras-item"><label class="adm-lbl">Overs</label><input class="adm-inp" id="inn2_overs" placeholder="20" style="width:70px;"></div>
+            </div>
+            <div class="adm-nav-row"><button class="adm-btn-sec" onclick="entryPrev(2)">← Back</button><button class="adm-btn-primary" onclick="entryNext(2)">Result →</button></div>
+          </div>
+
+          <!-- STEP 3: Result -->
+          <div class="adm-step-body" id="ebody3">
+            <div class="adm-section-label">Match Result</div>
+            <div id="admAutoFillBanner" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.25);border-radius:8px;font-size:12px;color:var(--green);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <span id="admAutoFillMsg">Auto-detected result from innings totals</span>
+              <button class="adm-ghost-btn" style="border-color:rgba(0,230,118,.4);color:var(--green);padding:5px 12px;font-size:10px;" onclick="applyAutoFill()">Apply Auto-Fill</button>
+            </div>
+            <div class="adm-field-grid">
+              <div class="adm-field"><label class="adm-lbl">Winner</label><select class="adm-inp" id="ef_winner"><option value="">Select winner</option></select></div>
+              <div class="adm-field"><label class="adm-lbl">Margin</label><input class="adm-inp" id="ef_margin" placeholder="e.g. 3 wickets / 28 runs"></div>
+              <div class="adm-field"><label class="adm-lbl">Player of the Match</label>
+                <input class="adm-inp" id="ef_potm" placeholder="Name" list="potm_dl">
+                <datalist id="potm_dl"></datalist>
+              </div>
+              <div class="adm-field"><label class="adm-lbl">POTM Performance</label><input class="adm-inp" id="ef_potmdetail" placeholder="e.g. 78* (31b)"></div>
+            </div>
+            <div id="entry_preview" class="adm-preview-box" style="margin-top:20px;"></div>
+            <div class="adm-nav-row"><button class="adm-btn-sec" onclick="entryPrev(3)">← Back</button><button class="adm-btn-save" onclick="saveMatch()">Save Match &amp; Update All Stats</button></div>
+          </div>
+
+          <!-- Success Screen -->
+          <div id="entrySavedMsg" style="display:none;text-align:center;padding:60px 20px;">
+            <div style="font-size:64px;margin-bottom:16px;">✓</div>
+            <div style="font-family:'Bebas Neue',cursive;font-size:52px;letter-spacing:2px;color:var(--green)">Match Saved</div>
+            <div style="font-size:13px;color:var(--silver);margin:10px 0 32px;letter-spacing:.5px;">All stats, records, points table and NRR updated instantly.</div>
+            <button class="adm-btn-primary" onclick="resetEntryForm()">Enter Next Match</button>
+          </div>
+        </div>
+
+        <!-- Saved entries manager -->
+        <div class="adm-card" style="margin-top:16px;">
+          <div class="adm-card-header">
+            <span class="adm-section-label" style="margin:0;padding:0;border:none;">Saved Entries</span>
+            <button class="adm-ghost-btn" onclick="toggleManage()">Show / Hide</button>
+          </div>
+          <div id="entryManagePanel" style="display:none;margin-top:16px;"><div id="entryManageList"></div></div>
+        </div>
+      </div>
+
+      <!-- MODE B: SMART PASTE -->
+      <div class="adm-mode-pane" id="admModePaste">
+        <div class="adm-card">
+          <div class="adm-section-label">Smart Paste</div>
+          <p class="adm-hint">Paste a scorecard in <em>any</em> text format — WhatsApp message, notes app, photo-to-text. The parser reads it and fills every field. Review the parsed preview, then apply to the form.</p>
+
+          <!-- Guide toggle -->
+          <div style="margin-bottom:14px;">
+            <button class="adm-ghost-btn" onclick="togglePasteGuide()" id="pasteGuideBtn">📖 Show Format Guide</button>
+          </div>
+          <div id="pasteGuidePanel" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;">Smart Paste — Format Guide</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px;color:var(--silver);line-height:1.8;">
+              <div>
+                <div style="color:var(--white);font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;margin-bottom:6px;">✅ Supported Batter Formats</div>
+                <code style="display:block;background:var(--card);padding:10px;border-radius:6px;font-size:11px;line-height:2;white-space:pre-wrap;">Enoch 84 (36) c Adith b Sachin
+Monish 102 (45) b Shreyans
+Shivu 45* (20) not out
+Name | 84 | 36 | c X b Y
+Name  84  36  c X b Y</code>
+              </div>
+              <div>
+                <div style="color:var(--white);font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;margin-bottom:6px;">✅ Supported Bowler Formats</div>
+                <code style="display:block;background:var(--card);padding:10px;border-radius:6px;font-size:11px;line-height:2;white-space:pre-wrap;">Shreyans 4-0-42-2
+Sachin 4 42 2
+Sachin | 4 | 42 | 2
+Lakshya 3.4 38 1</code>
+              </div>
+              <div>
+                <div style="color:var(--white);font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;margin-bottom:6px;">✅ Innings Headers (optional)</div>
+                <code style="display:block;background:var(--card);padding:10px;border-radius:6px;font-size:11px;line-height:2;white-space:pre-wrap;">1st Innings / First Innings
+2nd Innings / Second Innings
+RCB Innings / RCB 320/6 (20 ov)
+BATTING / BOWLING (section markers)</code>
+              </div>
+              <div>
+                <div style="color:var(--white);font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;margin-bottom:6px;">✅ Result Lines (optional)</div>
+                <code style="display:block;background:var(--card);padding:10px;border-radius:6px;font-size:11px;line-height:2;white-space:pre-wrap;">RCB won by 42 runs
+MI won by 3 wickets
+POTM: Enoch — 84(36) + 2/18
+Extras: 8
+Overs: 20</code>
+              </div>
+            </div>
+
+            <div style="margin-top:14px;padding:12px;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);border-radius:8px;font-size:11px;color:var(--silver);line-height:1.7;">
+              <span style="color:var(--gold);font-weight:700;">💡 Tips:</span>
+              <br>• Make sure the <strong>fixture teams are selected</strong> in Step 1 before pasting — the parser uses them to assign innings.
+              <br>• If you only paste one innings, parse it, then paste the second innings separately and parse again.
+              <br>• The parser auto-detects winners from run totals if no "won by" line is found.
+              <br>• Names with * (e.g. Shivu 45*) are automatically marked not-out.
+              <br>• After applying, always review the entries in the Quick Scorecard tab before saving.
+            </div>
+          </div>
+
+          <textarea id="pasteInput" class="adm-textarea" placeholder="Paste scorecard here…&#10;&#10;Example:&#10;1st Innings&#10;Enoch 84 (36) c Adith b Sachin&#10;Monish 102 (45) b Shreyans&#10;Shivu 45* (20) not out&#10;Extras: 8&#10;Total: 239/6 (20 ov)&#10;&#10;BOWLING&#10;Shreyans 4-0-42-2&#10;Sachin 4-0-38-1&#10;&#10;2nd Innings&#10;...&#10;&#10;MI won by 3 wickets&#10;POTM: Enoch — 84(36)"></textarea>
+          <div class="adm-action-row" style="margin-top:14px;">
+            <button class="adm-btn-primary" onclick="runSmartPaste()">Parse Scorecard →</button>
+            <button class="adm-ghost-btn" onclick="document.getElementById('pasteInput').value=''">Clear</button>
+          </div>
+          <div id="pasteStatus" class="adm-preview-box" style="margin-top:16px;display:none;"></div>
+          <div id="pasteParsePreview" style="display:none;margin-top:16px;"></div>
+          <div id="pasteApplyRow" style="display:none;margin-top:16px;">
+            <button class="adm-btn-save" onclick="applyPasteToForm()">Apply to Scorecard Form →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE C: BALL BY BALL -->
+      <div class="adm-mode-pane" id="admModeLive">
+        <div class="adm-card">
+          <div class="adm-section-label">Live Ball-by-Ball Scorer</div>
+          <p class="adm-hint">Score the match ball by ball in real time. Tap the run value, tap wicket or extras as needed. The scorecard builds automatically.</p>
+
+          <!-- Autosave status indicator -->
+          <div id="liveAutosaveStatus" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--silver);text-transform:uppercase;margin-bottom:8px;text-align:right;"></div>
+
+          <!-- Draft restore banner (shown on reload if draft exists) -->
+          <div id="liveDraftRestoreBanner" style="display:none;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;">⚡ UNSAVED DRAFT FOUND</div>
+            <div id="liveDraftRestoreInfo" style="font-size:12px;color:var(--silver);margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onclick="resumeLiveMatchInPlace()" style="padding:8px 20px;background:var(--gold);color:#000;border:none;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:1px;cursor:pointer;">▶ Resume Match</button>
+              <button onclick="discardLiveMatchInPlace()" style="padding:8px 20px;background:transparent;color:var(--red);border:1px solid rgba(230,57,70,.4);border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;letter-spacing:1px;cursor:pointer;">✕ Discard Draft</button>
+            </div>
+          </div>
+
+          <!-- Innings tabs + score display -->
+          <div class="adm-live-header">
+            <div class="adm-live-inn-tabs">
+              <button class="adm-live-inn-btn active" id="liveInn1Btn" onclick="setLiveInnings(1)">1st Innings</button>
+              <button class="adm-live-inn-btn" id="liveInn2Btn" onclick="setLiveInnings(2)">2nd Innings</button>
+            </div>
+            <div class="adm-live-scoreboard" id="liveScoreDisp">0/0 · 0.0 ov</div>
+          </div>
+
+          <!-- Current players -->
+          <div class="adm-live-players">
+            <div class="adm-live-player-slot">
+              <label class="adm-lbl">Striker</label>
+              <select class="adm-inp adm-live-sel" id="liveStriker"><option value="">Select batter</option></select>
+              <span class="adm-live-pstat" id="liveStrikerStat">0 (0)</span>
+            </div>
+            <div class="adm-live-player-slot">
+              <label class="adm-lbl">Non-striker</label>
+              <select class="adm-inp adm-live-sel" id="liveNonStriker"><option value="">Select batter</option></select>
+            </div>
+            <div class="adm-live-player-slot">
+              <label class="adm-lbl">Bowler</label>
+              <select class="adm-inp adm-live-sel" id="liveBowler"><option value="">Select bowler</option></select>
+              <span class="adm-live-pstat" id="liveBowlerStat">0-0 (0)</span>
+            </div>
+          </div>
+
+          <!-- Over Plan (pre-assign bowlers) -->
+          <div id="liveOverPlanWrap" style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <button class="adm-ghost-btn" style="font-size:11px;padding:6px 14px;" onclick="toggleOverPlan()">📋 Over Plan</button>
+              <span style="font-size:11px;color:var(--silver);" id="overPlanHint">Pre-assign bowlers to each over — auto-switches at over end</span>
+            </div>
+            <div id="liveOverPlanPanel" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:4px;">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">Bowler Plan — 20 Overs</div>
+              <div id="overPlanGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;"></div>
+              <div style="margin-top:10px;font-size:11px;color:var(--silver);">Leave blank to select manually during play.</div>
+            </div>
+          </div>
+
+          <!-- Scoring Pad -->
+          <div class="adm-scoring-pad">
+            <div class="adm-pad-section-label">Runs</div>
+            <div class="adm-pad-runs">
+              <button class="adm-ball-btn run-0" onclick="scoreBall(0)">0</button>
+              <button class="adm-ball-btn run-1" onclick="scoreBall(1)">1</button>
+              <button class="adm-ball-btn run-2" onclick="scoreBall(2)">2</button>
+              <button class="adm-ball-btn run-3" onclick="scoreBall(3)">3</button>
+              <button class="adm-ball-btn run-4 boundary" onclick="scoreBall(4)">4</button>
+              <button class="adm-ball-btn run-6 boundary" onclick="scoreBall(6)">6</button>
+            </div>
+            <div class="adm-pad-section-label" style="margin-top:14px;">Extras</div>
+            <div class="adm-pad-extras">
+              <button class="adm-ball-btn extra" onclick="scoreExtra('wd',0)">WD</button>
+              <button class="adm-ball-btn extra" onclick="toggleNbMenu()" id="nbMainBtn">NB ▾</button>
+              <button class="adm-ball-btn extra" onclick="scoreExtra('b',0)">BYE</button>
+              <button class="adm-ball-btn extra" onclick="scoreExtra('lb',0)">LB</button>
+              <button class="adm-ball-btn wicket" onclick="scoreWicket()">WICKET</button>
+              <button class="adm-ball-btn undo-btn" onclick="undoBall()">UNDO</button>
+            </div>
+            <!-- NB sub-menu -->
+            <div id="nbSubMenu" style="display:none;margin-top:10px;padding:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;">
+              <div class="adm-pad-section-label" style="margin-bottom:10px;">No Ball + runs off the bat</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <button class="adm-ball-btn extra" style="min-width:52px;" onclick="scoreExtra('nb',0)">NB+0</button>
+                <button class="adm-ball-btn run-1" style="min-width:52px;" onclick="scoreExtra('nb',1)">NB+1</button>
+                <button class="adm-ball-btn run-2" style="min-width:52px;" onclick="scoreExtra('nb',2)">NB+2</button>
+                <button class="adm-ball-btn run-3" style="min-width:52px;" onclick="scoreExtra('nb',3)">NB+3</button>
+                <button class="adm-ball-btn run-4 boundary" style="min-width:52px;" onclick="scoreExtra('nb',4)">NB+4</button>
+                <button class="adm-ball-btn run-6 boundary" style="min-width:52px;" onclick="scoreExtra('nb',6)">NB+6</button>
+                <button class="adm-ball-btn extra" style="min-width:64px;font-size:12px;" onclick="scoreExtra('nb+wd',0)">NB+WD</button>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:var(--silver);">NB = 1 extra always. Runs off bat (if any) also scored to batter.</div>
+            </div>
+          </div>
+
+          <!-- Over log -->
+          <div class="adm-over-log" id="liveOverLog"></div>
+
+          <!-- End of over notification -->
+          <div id="overEndBanner" style="display:none;padding:12px 16px;background:rgba(245,197,24,.09);border:1px solid rgba(245,197,24,.3);border-radius:10px;margin-top:10px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;color:var(--gold);letter-spacing:1px;">OVER COMPLETE — Select next bowler</div>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;" id="overEndBowlerBtns"></div>
+            <div style="margin-top:8px;font-size:11px;color:var(--silver);">Batters have swapped ends automatically.</div>
+          </div>
+
+          <!-- Live scorecard preview -->
+          <div class="adm-section-label" style="margin-top:20px;margin-bottom:10px;">Live Scorecard</div>
+          <div id="liveTargetInfo" style="display:none;padding:8px 14px;background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.2);border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:var(--gold);letter-spacing:.5px;margin-bottom:10px;"></div>
+          <div id="liveScorecardPreview" class="adm-preview-box"></div>
+
+          <div class="adm-action-row" style="margin-top:16px;">
+            <button class="adm-btn-save" onclick="applyLiveToForm()">Finalise & Go to Result →</button>
+            <button class="adm-ghost-btn" onclick="resetLive()">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: FIXTURES ══ -->
+    <div class="adm-section" id="adminSectionFixtures">
+      <div class="adm-card">
+        <div class="adm-card-header">
+          <span class="adm-section-label" style="margin:0;padding:0;border:none;">Fixture Schedule</span>
+          <span class="adm-hint" style="margin:0;">Drag to reorder · First fixture = next match</span>
+        </div>
+        <div id="fixtureWarning" class="adm-warning" style="margin-top:14px;display:none;"></div>
+        <div id="adminFixtureList" class="adm-fixture-list" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="adm-card" style="margin-top:16px;">
+        <div class="adm-section-label">Add / Edit Fixture</div>
+        <div class="adm-field-grid">
+          <div class="adm-field"><label class="adm-lbl">Match #</label><input class="adm-inp" id="fixtureId" type="number" readonly placeholder="Auto" style="opacity:.4;"></div>
+          <div class="adm-field"><label class="adm-lbl">Team 1</label><select class="adm-inp" id="fixtureT1"></select></div>
+          <div class="adm-field"><label class="adm-lbl">Team 2</label><select class="adm-inp" id="fixtureT2"></select></div>
+          <div class="adm-field"><label class="adm-lbl">Venue</label><input class="adm-inp" id="fixtureVenue" placeholder="LPL Arena"></div>
+          <div class="adm-field"><label class="adm-lbl">Date / Label</label><input class="adm-inp" id="fixtureDate" placeholder="e.g. 14 May 2025"></div>
+        </div>
+        <div class="adm-action-row" style="margin-top:16px;">
+          <button class="adm-btn-primary" onclick="saveFixture()">Save Fixture</button>
+          <button class="adm-ghost-btn" onclick="resetFixtureForm()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: TEAMS ══ -->
+    <div class="adm-section" id="adminSectionTeams">
+      <div class="adm-card">
+        <div class="adm-card-header">
+          <span class="adm-section-label" style="margin:0;padding:0;border:none;">Team Manager</span>
+          <div id="admTeamSeasonWarning" style="font-size:11px;padding:6px 14px;border-radius:6px;background:rgba(245,148,36,.12);border:1px solid rgba(245,148,36,.3);color:#ffb74d;display:none;">⚠ Season in progress — adding new teams disabled</div>
+        </div>
+        <p class="adm-hint" style="margin-top:12px;">Edit team names, colors, captain, vice-captain, and abbreviation. New teams can only be added when the season has not started or has ended.</p>
+        <div id="admTeamList" style="margin-top:16px;display:flex;flex-direction:column;gap:10px;"></div>
+        <div class="adm-card" style="margin-top:18px;border-color:rgba(245,197,24,.2);" id="admAddTeamCard">
+          <div class="adm-section-label">Add New Team</div>
+          <div class="adm-field-grid">
+            <div class="adm-field"><label class="adm-lbl">Abbreviation (e.g. RCB)</label><input class="adm-inp" id="nt_abbr" placeholder="MAX 4 CHARS" maxlength="4" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="adm-field"><label class="adm-lbl">Full Name</label><input class="adm-inp" id="nt_name" placeholder="e.g. Royal Challengers"></div>
+            <div class="adm-field"><label class="adm-lbl">Primary Color</label><input class="adm-inp" id="nt_pri" type="color" value="#E63946" style="height:42px;padding:4px 8px;"></div>
+            <div class="adm-field"><label class="adm-lbl">Secondary Color</label><input class="adm-inp" id="nt_sec" type="color" value="#FFBE0B" style="height:42px;padding:4px 8px;"></div>
+            <div class="adm-field"><label class="adm-lbl">Captain Name</label><input class="adm-inp" id="nt_cap" placeholder="Captain"></div>
+            <div class="adm-field"><label class="adm-lbl">Vice-Captain</label><input class="adm-inp" id="nt_vc" placeholder="Vice-Captain"></div>
+            <div class="adm-field"><label class="adm-lbl">Women's Team?</label><select class="adm-inp" id="nt_women"><option value="false">No (Men)</option><option value="true">Yes (Women)</option></select></div>
+          </div>
+          <div class="adm-action-row" style="margin-top:16px;">
+            <button class="adm-btn-primary" id="admAddTeamBtn" onclick="adminAddTeam()">Add Team</button>
+          </div>
+          <div id="admTeamAddMsg" style="margin-top:10px;font-size:12px;color:var(--silver);min-height:20px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: PLAYERS ══ -->
+    <div class="adm-section" id="adminSectionPlayers">
+      <div class="adm-card">
+        <div class="adm-card-header">
+          <span class="adm-section-label" style="margin:0;padding:0;border:none;">Player Manager</span>
+        </div>
+        <p class="adm-hint" style="margin-top:12px;">Select a team to view and edit its players. You can rename players, change their role/hand/style, or adjust their base attribute ratings. Use the + button to add a new player.</p>
+        <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <select class="adm-inp" id="admPlayerTeamSel" onchange="renderAdminPlayers()" style="max-width:260px;"></select>
+          <button class="adm-ghost-btn" onclick="adminAddPlayer()">+ Add Player</button>
+        </div>
+        <div id="admPlayerList" style="margin-top:18px;"></div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: SEASONS ══ -->
+    <div class="adm-section" id="adminSectionSeasons">
+      <div class="adm-card">
+        <div class="adm-section-label">Season Manager</div>
+        <p class="adm-hint">Create, start, close, archive, and review seasons. Archiving freezes standings, statistics, playoffs, and records in a permanent snapshot.</p>
+        <div class="adm-action-row" style="margin-top:18px;">
+          <button class="adm-btn-primary" onclick="lplCreateSeason()">Create Season</button>
+          <button class="adm-ghost-btn" onclick="lplStartSeason()">Start Season</button>
+          <button class="adm-ghost-btn" onclick="lplCloseSeason()">Close Season</button>
+          <button class="adm-ghost-btn" onclick="lplArchiveSeason()">Archive Season</button>
+          <button class="adm-ghost-btn" onclick="lplViewArchivedSeasons()">View Archived Seasons</button>
+        </div>
+        <div id="adminSeasonStatus" style="margin-top:16px;color:var(--silver);font-size:12px;min-height:20px;"></div>
+        <div id="adminSeasonList" style="margin-top:18px;"></div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: EXPORT ══ -->
+    <div class="adm-section" id="adminSectionBackup">
+      <div class="adm-card">
+        <div class="adm-section-label">Export Data</div>
+        <p class="adm-hint">Export database-independent JSON backups that can be restored into Supabase, PostgreSQL, MySQL, MongoDB, SQLite, or a fresh LPL installation.</p>
+        <div class="adm-action-row" style="margin-top:18px;">
+          <button class="adm-btn-primary" onclick="lplExportData('current-season')">Export Current Season</button>
+          <button class="adm-ghost-btn" onclick="lplExportData('selected-season')">Export Selected Season</button>
+          <button class="adm-ghost-btn" onclick="lplExportData('entire-database')">Export Entire Database</button>
+          <button class="adm-ghost-btn" onclick="lplExportData('live-match')">Export Live Match Only</button>
+          <button class="adm-ghost-btn" onclick="lplExportData('teams-only')">Export Teams Only</button>
+          <button class="adm-ghost-btn" onclick="lplExportData('players-only')">Export Players Only</button>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div class="adm-section-label" style="margin-bottom:10px;">Legacy HTML Export</div>
+          <button class="adm-btn-primary" onclick="exportUpdatedHTML()">Export Updated HTML</button>
+          <button class="adm-ghost-btn" onclick="copyJSArray('RESULTS')">Copy RESULTS array</button>
+          <button class="adm-ghost-btn" onclick="copyJSArray('FIXTURES')">Copy FIXTURES array</button>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin-bottom:10px;">Danger Zone</div>
+          <button class="adm-ghost-btn" style="border-color:rgba(230,57,70,.4);color:var(--red);" onclick="adminResetPlayoffs()">⚠ Reset Playoffs (Emergency Only)</button>
+          <div style="font-size:11px;color:var(--silver);margin-top:6px;">Only use this if playoffs were triggered accidentally. Clears all playoff fixtures and results.</div>
+        </div>
+        <div id="adminLastUpdate" style="margin-top:20px;color:var(--silver);font-size:12px;letter-spacing:.5px;">Last export: never</div>
+      </div>
+    </div>
+
+    <!-- ══ SECTION: IMPORT ══ -->
+    <div class="adm-section" id="adminSectionImport">
+      <div class="adm-card">
+        <div class="adm-section-label">Import Data</div>
+        <p class="adm-hint">Upload an LPL_EXPORT_V1 JSON file. Imports validate structure, detect duplicates, and can merge, overwrite, or import one season archive into a fresh installation.</p>
+        <div class="adm-field-grid" style="margin-top:14px;">
+          <div class="adm-field">
+            <label class="adm-lbl">Import file</label>
+            <input class="adm-inp" id="lplImportFile" type="file" accept="application/json,.json">
+          </div>
+          <div class="adm-field">
+            <label class="adm-lbl">Mode</label>
+            <select class="adm-inp" id="lplImportMode">
+              <option value="merge">Merge records</option>
+              <option value="overwrite">Overwrite matching records</option>
+              <option value="season-only">Season-only import</option>
+            </select>
+          </div>
+        </div>
+        <div class="adm-action-row" style="margin-top:16px;">
+          <button class="adm-btn-primary" onclick="lplImportData()">Import JSON</button>
+        </div>
+        <div id="lplImportStatus" style="margin-top:16px;color:var(--silver);font-size:12px;min-height:20px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
