@@ -4,6 +4,18 @@ This project refactors the original single-file `LPL_v18.html` app into a React 
 
 The current LPL UI, animations, admin scorer, scorecards, records, head-to-head screens, teams, fixtures, points table, playoffs, and live match workflow are preserved by hosting the legacy DOM/runtime inside React while database-backed services are introduced underneath it.
 
+## Post-Migration Notes
+
+This repository is now in the protected post-migration state:
+
+- The legacy LPL UI is still the product UI.
+- React is used as the mount/integration layer around the original markup/runtime.
+- API bootstrap loads database data before the legacy runtime initializes.
+- localStorage is no longer the source of truth for migrated data.
+- Compatibility sync bridges remain only where the legacy admin UI still mutates in-memory objects.
+
+See [docs/POST_MIGRATION_AUDIT.md](docs/POST_MIGRATION_AUDIT.md) for the current technical debt, storage usage, risks, and next priorities.
+
 ## Structure
 
 ```text
@@ -49,10 +61,12 @@ cp .env.example .env
 
 ```env
 SUPABASE_URL=...
-SUPABASE_KEY=...
+SUPABASE_KEY=... # server-side service_role key
 JWT_SECRET=replace-with-a-long-random-secret
 ADMIN_PASSWORD=replace-with-a-strong-admin-password
 ```
+
+Keep `.env` outside git. Do not put `SUPABASE_KEY`, `JWT_SECRET`, `DATABASE_URL`, or `ADMIN_PASSWORD` in any `VITE_*` variable because Vite exposes those to the browser.
 
 4. Run the Supabase SQL in:
 
@@ -215,3 +229,32 @@ npm run start --workspace server
 ```
 
 The Express server serves the Vite build from `client/dist`.
+
+## Architecture Summary
+
+```text
+Browser
+  React mount wrapper
+  Original LPL markup/runtime
+  lplApi service
+    |
+Node/Express REST API
+  controllers
+  services
+  repositories
+    |
+Database provider adapter
+  Supabase PostgreSQL by default
+  PostgreSQL / MySQL / MongoDB / SQLite / memory supported by adapter
+```
+
+The frontend should not import database clients or secrets. All persistence flows through the Express API.
+
+## Persistence Flow
+
+- Page startup: `lplApi` fetches seasons, teams, players, matches, playoffs, and live match state, then the legacy UI renders from those API-backed objects.
+- Live scorer: local autosave remains as a backup, while `/api/live/current` is the durable store.
+- Fixtures and custom matches: the legacy UI mutates its familiar arrays, then syncs through `/api/import/storage-key`; the backend converts those payloads into normalized rows.
+- Export/import/archive: admin extensions call the existing REST endpoints and do not rely on localStorage as the source of truth.
+
+Backend outages are surfaced visibly. The app does not silently restore baked-in fake data when the main API bootstrap fails.

@@ -17,13 +17,23 @@ async function request(path, options = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers
+    });
+  } catch (err) {
+    throw new Error(`Unable to reach LPL API at ${API_BASE}${path}. Check that the backend is running.`);
+  }
 
   const contentType = response.headers.get('content-type') || '';
-  const payload = contentType.includes('application/json') ? await response.json() : await response.text();
+  let payload;
+  try {
+    payload = contentType.includes('application/json') ? await response.json() : await response.text();
+  } catch {
+    payload = '';
+  }
 
   if (!response.ok) {
     const message = typeof payload === 'object' ? payload.error || payload.message : payload;

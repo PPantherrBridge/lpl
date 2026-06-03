@@ -4121,6 +4121,15 @@ function _showApiBootError(message){
   document.body.prepend(banner);
 }
 
+function _showApiBootWarning(message){
+  if(!message || document.getElementById('lplApiBootWarning')) return;
+  const banner = document.createElement('div');
+  banner.id = 'lplApiBootWarning';
+  banner.style.cssText = 'position:sticky;top:0;z-index:99998;background:#2b2106;color:#ffe9b5;border-bottom:1px solid #c59b22;padding:8px 18px;font:600 12px system-ui,Arial,sans-serif;text-align:center;';
+  banner.textContent = message;
+  document.body.prepend(banner);
+}
+
 async function _hydrateLplFromApi(){
   if(!window.LPLApi){
     _clearLegacyData();
@@ -4179,6 +4188,10 @@ async function bootLpl(){
   await _hydrateLplFromApi();
   masterInit();
   if(window.__LPL_API_BOOT_ERROR__) _showApiBootError(window.__LPL_API_BOOT_ERROR__);
+  if(!window.__LPL_API_BOOT_ERROR__){
+    const warnings = [window.__LPL_API_PLAYOFF_ERROR__, window.__LPL_API_LIVE_ERROR__].filter(Boolean);
+    if(warnings.length) _showApiBootWarning('Some LPL database data could not be loaded: ' + warnings.join(' '));
+  }
 }
 
 function masterInit(){
