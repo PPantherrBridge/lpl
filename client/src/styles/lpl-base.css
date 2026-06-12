@@ -128,6 +128,21 @@ table.lb tr:hover td{background:rgba(245,197,24,.03);}
 .clearbtn{position:absolute;top:10px;right:10px;background:none;border:1px solid var(--border);color:var(--silver);padding:4px 10px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;cursor:pointer;}
 .clearbtn:hover{border-color:var(--red);color:var(--red);}
 
+/* ── CRICKET CENTER ── */
+.cc-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cc-panel-hdr{padding:22px 24px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(245,197,24,.06) 0%,transparent 100%);}
+.cc-panel-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;letter-spacing:.5px;}
+.cc-panel-sub{font-size:12px;color:var(--silver);margin-top:4px;}
+.cc-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--card2);}
+.cc-meta-item{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.cc-meta-lbl{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--silver);}
+.cc-meta-val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cc-placeholder{padding:28px 24px 32px;}
+.cc-placeholder-lead{font-size:14px;line-height:1.65;color:var(--silver);margin:0 0 14px;max-width:720px;}
+.cc-placeholder-note{font-size:12px;line-height:1.6;color:var(--silver);margin:0;opacity:.85;}
+.cc-placeholder-note code{font-family:ui-monospace,monospace;font-size:11px;color:var(--gold);}
+.h2hpage .filters-bar .fsel{min-width:180px;}
+
 /* ══════════════ OVERLAY GLASS ANIMATIONS ══════════════ */
 /* ══════════════ OVERLAY GLASS ANIMATIONS ══════════════ */
 @keyframes overlayIn  {from{opacity:0;}                                                   to{opacity:1;}}

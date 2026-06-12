@@ -1524,6 +1524,215 @@ function _recPotm(el){
   );
 }
 
+// ═══════════════════════════════════════════ CRICKET CENTER
+const CC_SECTION_LABELS = {
+  profile: 'Player Profile',
+  pvp: 'Player vs Player',
+  tvt: 'Team vs Team',
+  records: 'Records',
+  rankings: 'Rankings',
+  milestones: 'Milestones'
+};
+
+const ccState = {
+  section: 'profile',
+  playerKey: '',
+  seasonId: '',
+  matchFilter: 'all'
+};
+
+let _ccFiltersReady = false;
+
+function _syncCcStateFromFilters() {
+  const playerSel = document.getElementById('ccPlayerSelect');
+  const seasonSel = document.getElementById('ccSeasonSelect');
+  const matchSel = document.getElementById('ccMatchFilter');
+  ccState.playerKey = (playerSel && playerSel.value) || '';
+  ccState.seasonId = (seasonSel && seasonSel.value) || '';
+  ccState.matchFilter = (matchSel && matchSel.value) || 'all';
+}
+
+function _getCcFilterOptions() {
+  return {
+    seasonId: ccState.seasonId || null,
+    matchFilter: ccState.matchFilter || 'all'
+  };
+}
+
+function getCcFilteredResults() {
+  return getFilteredResults(_getCcFilterOptions());
+}
+
+function _populateCcFilters() {
+  const playerSel = document.getElementById('ccPlayerSelect');
+  const seasonSel = document.getElementById('ccSeasonSelect');
+  const matchSel = document.getElementById('ccMatchFilter');
+  if (!playerSel || !seasonSel || !matchSel) return;
+
+  const prevPlayer = ccState.playerKey || playerSel.value || '';
+  const prevSeason = ccState.seasonId || seasonSel.value || '';
+  const prevMatch = ccState.matchFilter || matchSel.value || 'all';
+
+  if (!_ccFiltersReady || playerSel.options.length <= 1) {
+    const players = allP().sort((a, b) => a.n.localeCompare(b.n));
+    playerSel.innerHTML = '<option value="">All Players</option>' + players.map((p) =>
+      `<option value="${p.n}|${p.team}">${p.n} · ${p.team}</option>`
+    ).join('');
+  }
+
+  if (!_ccFiltersReady || seasonSel.options.length <= 1) {
+    const seasons = window.__LPL_API_SEASONS__ || [];
+    let html = '<option value="">All Seasons</option>';
+    if (seasons.length) {
+      html += seasons.map((s) => {
+        const id = s.id || s.seasonId || '';
+        const label = s.name || s.label || s.title || id || 'Season';
+        return `<option value="${id}">${label}</option>`;
+      }).join('');
+    } else {
+      html += '<option value="">LPL Season 1</option>';
+    }
+    seasonSel.innerHTML = html;
+  }
+
+  playerSel.value = [...playerSel.options].some((o) => o.value === prevPlayer) ? prevPlayer : '';
+  seasonSel.value = [...seasonSel.options].some((o) => o.value === prevSeason) ? prevSeason : '';
+  matchSel.value = [...matchSel.options].some((o) => o.value === prevMatch) ? prevMatch : 'all';
+
+  _syncCcStateFromFilters();
+  _ccFiltersReady = true;
+}
+
+function _ccSelectedPlayerLabel() {
+  if (!ccState.playerKey) return 'All players';
+  const [name, team] = ccState.playerKey.split('|');
+  const tm = TEAM_META[team] || {};
+  return `${name} · ${tm.name || team} (${team})`;
+}
+
+function _ccSelectedSeasonLabel() {
+  if (!ccState.seasonId) return 'All seasons';
+  const seasons = window.__LPL_API_SEASONS__ || [];
+  const match = seasons.find((s) => (s.id || s.seasonId) === ccState.seasonId);
+  return match ? (match.name || match.label || match.title || ccState.seasonId) : ccState.seasonId;
+}
+
+function _ccMatchFilterLabel() {
+  const labels = {
+    all: 'All matches',
+    league: 'League only',
+    playoffs: 'Playoffs only',
+    finals: 'Finals only'
+  };
+  return labels[ccState.matchFilter] || 'All matches';
+}
+
+function _ccBuildContext() {
+  _syncCcStateFromFilters();
+  const filterOptions = _getCcFilterOptions();
+  const filteredResults = getCcFilteredResults();
+  const completedCount = filteredResults.filter((m) => m.winner !== 'TBD').length;
+  return {
+    ccState: { ...ccState },
+    filterOptions,
+    filteredResults,
+    completedCount,
+    playerLabel: _ccSelectedPlayerLabel(),
+    seasonLabel: _ccSelectedSeasonLabel(),
+    matchFilterLabel: _ccMatchFilterLabel()
+  };
+}
+
+function _ccPlaceholderShell(title, bodyHtml, ctx) {
+  return `
+    <div class="cc-panel">
+      <div class="cc-panel-hdr">
+        <div class="cc-panel-title">${title}</div>
+        <div class="cc-panel-sub">Placeholder view · advanced stats coming in a later phase</div>
+      </div>
+      <div class="cc-meta">
+        <div class="cc-meta-item"><span class="cc-meta-lbl">Player</span><span class="cc-meta-val">${ctx.playerLabel}</span></div>
+        <div class="cc-meta-item"><span class="cc-meta-lbl">Season</span><span class="cc-meta-val">${ctx.seasonLabel}</span></div>
+        <div class="cc-meta-item"><span class="cc-meta-lbl">Matches</span><span class="cc-meta-val">${ctx.matchFilterLabel}</span></div>
+        <div class="cc-meta-item"><span class="cc-meta-lbl">In scope</span><span class="cc-meta-val">${ctx.completedCount} completed / ${ctx.filteredResults.length} total</span></div>
+      </div>
+      <div class="cc-placeholder">${bodyHtml}</div>
+    </div>`;
+}
+
+function renderCCProfile(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.profile, `
+    <p class="cc-placeholder-lead">Detailed player profile cards will appear here — batting, bowling, and attribute breakdown for the selected filters.</p>
+    <p class="cc-placeholder-note">Filtered result set loaded: <strong>${ctx.filteredResults.length}</strong> matches ready for aggregation.</p>
+  `, ctx);
+}
+
+function renderCCPvP(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.pvp, `
+    <p class="cc-placeholder-lead">Side-by-side player comparison will replace this panel — attribute bars, scorecard stats, and head-to-head history.</p>
+    <p class="cc-placeholder-note">Use the player filter to pre-select a focus player for future PvP pickers.</p>
+  `, ctx);
+}
+
+function renderCCTvT(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.tvt, `
+    <p class="cc-placeholder-lead">Team vs team win records, run aggregates, and fixture history will render here.</p>
+    <p class="cc-placeholder-note">${Object.keys(TEAM_META).length} franchises · ${ctx.filteredResults.length} matches in current filter scope.</p>
+  `, ctx);
+}
+
+function renderCCRecords(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.records, `
+    <p class="cc-placeholder-lead">Embedded records leaderboards (Orange Cap, Purple Cap, team totals, etc.) will reuse the unified statistics engine with Cricket Center filters applied.</p>
+    <p class="cc-placeholder-note">Records page logic will be composed here instead of duplicated.</p>
+  `, ctx);
+}
+
+function renderCCRankings(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.rankings, `
+    <p class="cc-placeholder-lead">Combined rankings — points table, MVP table, and batting/bowling leaders — will appear in this tab.</p>
+    <p class="cc-placeholder-note">Rankings will respect season and match-type filters via <code>getFilteredResults()</code>.</p>
+  `, ctx);
+}
+
+function renderCCMilestones(el, ctx) {
+  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.milestones, `
+    <p class="cc-placeholder-lead">Centuries, five-fers, cap milestones, and debut markers will be tracked here.</p>
+    <p class="cc-placeholder-note">Fielding and milestone aggregators are ready in the statistics engine for future wiring.</p>
+  `, ctx);
+}
+
+function setCcSection(section, btn) {
+  if (!CC_SECTION_LABELS[section]) section = 'profile';
+  ccState.section = section;
+  document.querySelectorAll('.cc-main-tab').forEach((b) => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCricketCenter();
+}
+
+function renderCricketCenter() {
+  const content = document.getElementById('ccContent');
+  if (!content) return;
+
+  _populateCcFilters();
+  const ctx = _ccBuildContext();
+
+  const renderers = {
+    profile: renderCCProfile,
+    pvp: renderCCPvP,
+    tvt: renderCCTvT,
+    records: renderCCRecords,
+    rankings: renderCCRankings,
+    milestones: renderCCMilestones
+  };
+
+  const render = renderers[ccState.section] || renderCCProfile;
+  render(content, ctx);
+
+  const title = document.getElementById('cricketCenterTitle');
+  if (title) title.textContent = CRICKET_CENTER_LABEL;
+}
+
 // ═══════════════════════════════════════════ HEAD TO HEAD
 let h2h={A:null,B:null},pickTarget=null;
 
