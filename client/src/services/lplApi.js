@@ -145,6 +145,23 @@ export const lplApi = {
   listMatches() {
     return request('/matches');
   },
+  createMatch(body) {
+    return request('/matches', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  },
+  updateMatch(id, body) {
+    return request(`/matches/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+  },
+  deleteMatch(id) {
+    return request(`/matches/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  },
   listRecords() {
     return request('/records');
   },

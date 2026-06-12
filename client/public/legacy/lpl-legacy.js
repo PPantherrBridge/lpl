@@ -162,6 +162,7 @@ function allP(){
 let _homeInited=false;
 let AUTHENTICATED=false;
 const LOGIN_CREDENTIALS=['LPLAdminAccess2026'];
+const CRICKET_CENTER_LABEL='Cricket Center';
 
 function updateAuthNav(){
   const addBtn = document.getElementById('addMatchBtn');
@@ -271,6 +272,9 @@ function showPage(id,btn){
       }
     }
   }
+  if(id==='h2h'){
+    renderCricketCenter();
+  }
 }
 
 function selectAdminSection(section, btn){
@@ -306,8 +310,45 @@ function updateBallModeLabel(){
   }
 }
 
+function isPlayoffStageActive(){
+  const stage = getTournamentStage();
+  return stage === STAGE.PLAYOFF || stage === STAGE.COMPLETED;
+}
+
+function isPlayablePlayoffFixture(fixture){
+  if(!fixture) return false;
+  if(fixture.status === 'completed') return false;
+  if(!fixture.t1 || !fixture.t2) return false;
+  return fixture.t1 !== 'TBD' && fixture.t2 !== 'TBD';
+}
+
+function asPlayoffEntryFixture(fixture){
+  return {
+    ...fixture,
+    stage: 'playoff',
+    isPlayoff: true,
+    playoffRound: fixture.round,
+    playoffLabel: fixture.label
+  };
+}
+
+function getMatchEntryFixtures(){
+  if(isPlayoffStageActive()){
+    return PLAYOFF_FIXTURES.map(asPlayoffEntryFixture).filter(isPlayablePlayoffFixture);
+  }
+  return FIXTURES;
+}
+
+function getAdminFixtureRows(){
+  if(isPlayoffStageActive()){
+    return PLAYOFF_FIXTURES.map(asPlayoffEntryFixture);
+  }
+  return FIXTURES;
+}
+
 function getNextFixture(){
-  return FIXTURES.length ? FIXTURES[0] : null;
+  const fixtures = getMatchEntryFixtures();
+  return fixtures.length ? fixtures[0] : null;
 }
 
 function renderNextFixturePanel(){
@@ -316,11 +357,26 @@ function renderNextFixturePanel(){
   const banner = document.getElementById('apFixtureTeams');
   const meta = document.getElementById('apFixtureMeta');
   if(next){
+    if(next.isPlayoff){
+      const label = next.label || next.round || 'Playoff';
+      if(target) target.innerHTML = `${label}: ${TEAM_META[next.t1]?.name||next.t1} vs ${TEAM_META[next.t2]?.name||next.t2} - ${next.date}`;
+      if(banner) banner.textContent = `${TEAM_META[next.t1]?.name||next.t1} vs ${TEAM_META[next.t2]?.name||next.t2}`;
+      if(meta) meta.textContent = `${label} - Match ${next.id} - ${next.date} - ${next.venue}`;
+      populateEntryFromFixture(next);
+      return;
+    }
     if(target) target.innerHTML = `Next: ${TEAM_META[next.t1]?.name||next.t1} vs ${TEAM_META[next.t2]?.name||next.t2} · ${next.date}`;
     if(banner) banner.textContent = `${TEAM_META[next.t1]?.name||next.t1} vs ${TEAM_META[next.t2]?.name||next.t2}`;
     if(meta) meta.textContent = `Match ${next.id} · ${next.date} · ${next.venue}`;
     populateEntryFromFixture(next);
   } else {
+    if(isPlayoffStageActive()){
+      if(target) target.textContent = 'No playable playoff fixture';
+      if(banner) banner.textContent = 'Awaiting playoff progression';
+      if(meta) meta.textContent = 'Complete the available playoff match or wait for TBD teams to resolve.';
+      enableEntryTeamSelection();
+      return;
+    }
     if(target) target.textContent = 'No upcoming fixture';
     if(banner) banner.textContent = 'No fixture selected';
     if(meta) meta.textContent = 'Add fixtures in the Fixtures tab to lock match teams automatically.';
@@ -333,6 +389,7 @@ function populateEntryFromFixture(fixture){
   const t1sel = document.getElementById('ef_t1');
   const t2sel = document.getElementById('ef_t2');
   if(!fixture || !t1sel || !t2sel || !matchId) return;
+  if(t1sel.options.length <= 1 || t2sel.options.length <= 1) populateEntryTeamOptions();
   matchId.value = fixture.id;
   t1sel.value = fixture.t1;
   t2sel.value = fixture.t2;
@@ -359,9 +416,71 @@ function initFixtureSelectors(){
   t2.innerHTML = t1.innerHTML;
 }
 
+function playoffFixtureKey(fixture){
+  return String(fixture.round || fixture.id || '').replace(/'/g, '');
+}
+
+function playoffFixtureStatus(fixture){
+  if(fixture.status === 'completed') return 'Completed';
+  if(isPlayablePlayoffFixture(fixture)) return 'Ready';
+  return 'Waiting for teams';
+}
+
+function findAdminFixture(key){
+  const text = String(key);
+  return getAdminFixtureRows().find((fixture)=>(
+    String(fixture.round || '') === text || String(fixture.id || '') === text
+  ));
+}
+
+function playFixture(key){
+  const fixture = findAdminFixture(key);
+  if(!isPlayablePlayoffFixture(fixture)){
+    alert('This playoff fixture is not ready yet.');
+    return;
+  }
+  selectAdminSection('match', document.querySelector('[data-section=match]'));
+  admSelectMode('quick');
+  populateEntryFromFixture(fixture);
+  renderNextFixturePanel();
+}
+
+function renderAdminPlayoffFixtures(list){
+  const rows = getAdminFixtureRows();
+  const next = getNextFixture();
+  if(!rows.length){
+    list.innerHTML='<div style="color:var(--silver);font-size:13px;padding:12px 0;">No playoff fixtures generated yet.</div>';
+    updateFixtureWarning();
+    return;
+  }
+  list.innerHTML = rows.map((f)=>{
+    const t1 = TEAM_META[f.t1] || {name:f.t1 || 'TBD',pri:'#444',sec:'#fff'};
+    const t2 = TEAM_META[f.t2] || {name:f.t2 || 'TBD',pri:'#444',sec:'#fff'};
+    const isNext = next && (String(next.round || next.id) === String(f.round || f.id));
+    const canPlay = isPlayablePlayoffFixture(f);
+    const status = playoffFixtureStatus(f);
+    const key = playoffFixtureKey(f);
+    return `<div class="adm-fixture-item${isNext?' adm-fixture-next':''}">
+      <div class="adm-drag-handle">🏆</div>
+      <div class="adm-fixture-meta">
+        <strong>${isNext?'NEXT PLAYOFF - ':''}${f.label || f.round || 'PLAYOFF'} · ${t1.name} vs ${t2.name}</strong>
+        <span>${status} · Match ${f.id} · ${f.date||'TBD'} · ${f.venue||'LPL Arena'}</span>
+      </div>
+      <div class="adm-fixture-actions">
+        ${canPlay ? `<button class="adm-ghost-btn" onclick="playFixture('${key}')">Play</button>` : `<span style="font-size:11px;color:var(--silver);">${status}</span>`}
+      </div>
+    </div>`;
+  }).join('');
+  updateFixtureWarning();
+}
+
 function renderAdminFixtures(){
   const list = document.getElementById('adminFixtureList');
   if(!list) return;
+  if(isPlayoffStageActive()){
+    renderAdminPlayoffFixtures(list);
+    return;
+  }
   if(!FIXTURES.length){
     list.innerHTML='<div style="color:var(--silver);font-size:13px;padding:12px 0;">No fixtures scheduled. Add one below.</div>';
     updateFixtureWarning();
@@ -401,20 +520,25 @@ function editFixture(id){
   if(addCard) addCard.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function deleteFixture(id){
+async function deleteFixture(id){
   if(!confirm('Remove fixture from schedule?')) return;
   const index = FIXTURES.findIndex(f=>f.id===id);
   if(index>=0){
-    FIXTURES.splice(index,1);
-    saveFixturesToStorage();
-    renderAdminFixtures();
-    renderFixtures();
-    renderNextFixturePanel();
-    updateLastUpdate();
+    const fixture = FIXTURES[index];
+    try {
+      await _deleteFixtureDirect(fixture);
+      await _reloadMatchesFromApi();
+      renderAdminFixtures();
+      renderFixtures();
+      renderNextFixturePanel();
+      updateLastUpdate();
+    } catch(error){
+      _showFixtureApiError(error);
+    }
   }
 }
 
-function saveFixture(){
+async function saveFixture(){
   const id = parseInt(document.getElementById('fixtureId').value,10)||0;
   const t1 = document.getElementById('fixtureT1').value;
   const t2 = document.getElementById('fixtureT2').value;
@@ -422,20 +546,18 @@ function saveFixture(){
   const date = document.getElementById('fixtureDate').value.trim() || 'TBD';
   if(!t1||!t2){ alert('Please select both teams.'); return; }
   if(t1===t2){ alert('Teams must be different.'); return; }
-  if(id){
-    // Edit existing
-    const fixture = FIXTURES.find(f=>f.id===id);
-    if(fixture){ fixture.t1=t1; fixture.t2=t2; fixture.venue=venue; fixture.date=date; }
-  } else {
-    // Add new
+  const fixture = { id, t1, t2, venue, date };
+  if(!id){
     const usedIds = [...FIXTURES.map(f=>f.id), ...RESULTS.map(r=>r.id)];
-    const next = usedIds.length ? Math.max(...usedIds)+1 : 1;
-    FIXTURES.push({id:next, t1, t2, venue, date});
+    fixture.id = usedIds.length ? Math.max(...usedIds)+1 : 1;
   }
+  try {
+    if(id) await _updateFixtureDirect(fixture);
+    else await _createFixtureDirect(fixture);
+    await _reloadMatchesFromApi();
   // Re-render list (do NOT call initFixtureSelectors here — it resets values)
   renderAdminFixtures();
   resetFixtureForm();
-  saveFixturesToStorage();
   // Update next-fixture banner and match-entry lock
   renderNextFixturePanel();
   // Refresh public matches page if visible
@@ -450,6 +572,9 @@ function saveFixture(){
     warn.style.background='rgba(0,230,118,.07)';
     warn.style.borderColor='rgba(0,230,118,.25)';
     setTimeout(()=>{ warn.style.color=''; warn.style.background=''; warn.style.borderColor=''; updateFixtureWarning(); }, 2200);
+  }
+  } catch(error){
+    _showFixtureApiError(error);
   }
 }
 
@@ -494,6 +619,8 @@ function onFixtureDrop(e,index){
   if(isNaN(from) || from===index) return;
   const moved = FIXTURES.splice(from,1)[0];
   FIXTURES.splice(index,0,moved);
+  // TODO(fixtures-crud): fixture ordering is still a legacy local-only concern.
+  // The current matches API has no ordering field beyond match_number.
   saveFixturesToStorage();
   // Refresh admin list
   renderAdminFixtures();
@@ -2738,10 +2865,12 @@ function activatePlayoffStage(){
   setTournamentStage(STAGE.PLAYOFF);
   savePlayoffFixtures();
 
-  // Lock out all remaining league fixtures (they are superseded)
+  // Lock out all remaining league fixtures (they are superseded).
   // Do NOT delete FIXTURES in case user wants to see them — just clear them
+  const clearedFixtures = [...FIXTURES];
   FIXTURES.length = 0;
   saveFixturesToStorage();
+  _deleteFixturesDirect(clearedFixtures).catch((error)=>console.warn('LPL fixture cleanup failed', error));
 
   return true;
 }
@@ -2910,7 +3039,90 @@ function saveTeamsToStorage(){
 // ─── FIXTURES PERSISTENCE ─────────────────────────────────────────────────────
 function saveFixturesToStorage(){
   try{ localStorage.setItem('lpl_fixtures', JSON.stringify(FIXTURES)); } catch(e){}
-  _syncLegacyStorageKey('lpl_fixtures', FIXTURES);
+  // TODO(fixtures-crud): keep this cache only for legacy UI compatibility.
+  // Fixture create/edit/delete now persist through direct /api/matches calls.
+}
+
+function _fixtureApiId(fixture){
+  const id = fixture?.id ?? fixture?.match_number ?? fixture?.matchNumber;
+  const text = String(id || '');
+  return text.startsWith('fixture_') ? text : `fixture_${text}`;
+}
+
+function _fixtureApiPayload(fixture){
+  return {
+    id: _fixtureApiId(fixture),
+    match_number: Number(fixture.id || fixture.match_number || fixture.matchNumber) || null,
+    stage: fixture.stage || 'league',
+    team1_id: fixture.t1,
+    team2_id: fixture.t2,
+    venue: fixture.venue || 'LPL Arena',
+    match_date_label: fixture.date || 'TBD',
+    status: 'scheduled',
+    raw: fixture
+  };
+}
+
+function _showFixtureApiError(error){
+  const message = error?.message || 'Fixture change could not be saved to the database.';
+  const warn = document.getElementById('fixtureWarning');
+  if(warn){
+    warn.textContent = message;
+    warn.style.display = 'block';
+    warn.style.color = 'var(--red)';
+    warn.style.background = 'rgba(230,57,70,.08)';
+    warn.style.borderColor = 'rgba(230,57,70,.3)';
+  } else {
+    alert(message);
+  }
+}
+
+async function _reloadMatchesFromApi(){
+  if(!window.LPLApi || typeof window.LPLApi.listMatches !== 'function'){
+    throw new Error('LPL API client is unavailable. Fixture changes were not reloaded.');
+  }
+  const response = await window.LPLApi.listMatches();
+  _applyApiMatches(_unwrapApiList(response));
+  saveFixturesToStorage();
+}
+
+async function _createFixtureDirect(fixture){
+  if(!window.LPLApi || typeof window.LPLApi.createMatch !== 'function'){
+    throw new Error('LPL API client is unavailable. Fixture was not created.');
+  }
+  return window.LPLApi.createMatch(_fixtureApiPayload(fixture));
+}
+
+async function _updateFixtureDirect(fixture){
+  if(!window.LPLApi || typeof window.LPLApi.updateMatch !== 'function'){
+    throw new Error('LPL API client is unavailable. Fixture was not updated.');
+  }
+  const id = _fixtureApiId(fixture);
+  try {
+    return await window.LPLApi.updateMatch(id, _fixtureApiPayload(fixture));
+  } catch(error){
+    if(String(error?.message || '').toLowerCase().includes('not found')){
+      return _createFixtureDirect(fixture);
+    }
+    throw error;
+  }
+}
+
+async function _deleteFixtureDirect(fixture){
+  if(!window.LPLApi || typeof window.LPLApi.deleteMatch !== 'function'){
+    throw new Error('LPL API client is unavailable. Fixture was not deleted.');
+  }
+  try {
+    await window.LPLApi.deleteMatch(_fixtureApiId(fixture));
+  } catch(error){
+    if(!String(error?.message || '').toLowerCase().includes('not found')) throw error;
+  }
+}
+
+async function _deleteFixturesDirect(fixtures){
+  for(const fixture of fixtures){
+    await _deleteFixtureDirect(fixture);
+  }
 }
 (function loadFixturesFromStorage(){
   try{
@@ -4630,7 +4842,11 @@ function saveMatch(){
 
   // Remove from league FIXTURES if present
   const fi=FIXTURES.findIndex(f=>f.t1===t1k&&f.t2===t2k||f.t1===t2k&&f.t2===t1k);
-  if(fi>=0){ FIXTURES.splice(fi,1); saveFixturesToStorage(); }
+  if(fi>=0){
+    const completedFixture = FIXTURES.splice(fi,1)[0];
+    saveFixturesToStorage();
+    _deleteFixtureDirect(completedFixture).catch((error)=>console.warn('LPL fixture cleanup failed', error));
+  }
 
   // Re-render everything
   renderStat();
