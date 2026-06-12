@@ -1661,10 +1661,138 @@ function _ccPlaceholderShell(title, bodyHtml, ctx) {
 }
 
 function renderCCProfile(el, ctx) {
-  el.innerHTML = _ccPlaceholderShell(CC_SECTION_LABELS.profile, `
-    <p class="cc-placeholder-lead">Detailed player profile cards will appear here — batting, bowling, and attribute breakdown for the selected filters.</p>
-    <p class="cc-placeholder-note">Filtered result set loaded: <strong>${ctx.filteredResults.length}</strong> matches ready for aggregation.</p>
-  `, ctx);
+  if (!ctx.ccState.playerKey) {
+    el.innerHTML = `
+      <div class="cc-panel">
+        <div class="cc-empty">
+          <div class="cc-empty-icon">👤</div>
+          <div class="cc-empty-title">Select a player</div>
+          <p class="cc-empty-text">Choose a player from the <strong>player dropdown</strong> above to view batting, bowling, fielding stats, and a recent match log.</p>
+          <p class="cc-empty-note">${ctx.completedCount} completed matches in scope · ${ctx.seasonLabel} · ${ctx.matchFilterLabel}</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const [playerName, playerTeam] = ctx.ccState.playerKey.split('|');
+  const profile = statsEngine().buildPlayerProfileStats(
+    ctx.filteredResults,
+    TEAM_META,
+    playerName,
+    playerTeam,
+    ctx.filterOptions
+  );
+
+  const roster = allP().find((p) => p.n === playerName && p.team === playerTeam);
+  const tm = TEAM_META[playerTeam] || {};
+  const pri = roster?.pri || tm.pri || '#444';
+  const sec = roster?.sec || tm.sec || '#fff';
+  const role = roster ? rfull(roster.role) : 'Player';
+  const overall = roster ? avg(roster) : '—';
+
+  const statChip = (label, value) => `
+    <div class="hstat">
+      <div class="hstat-val">${value ?? '—'}</div>
+      <div class="hstat-lbl">${label}</div>
+    </div>`;
+
+  const section = (title, color, chips) => {
+    if (!chips) return '';
+    return `
+      <div class="cc-profile-section">
+        <div class="cc-section-title" style="color:${color}">${title}</div>
+        <div class="cc-stat-grid">${chips}</div>
+      </div>`;
+  };
+
+  const bat = profile.batting;
+  const bowl = profile.bowling;
+  const fld = profile.fielding;
+
+  const battingSection = bat ? section('Batting', '#FF822A', [
+    statChip('Matches', bat.matches),
+    statChip('Innings', bat.innings),
+    statChip('Runs', bat.runs),
+    statChip('Balls', bat.balls),
+    statChip('Average', bat.average),
+    statChip('Strike Rate', bat.strikeRate),
+    statChip('Highest', bat.highestScore),
+    statChip('30s', bat.thirties),
+    statChip('50s', bat.fifties),
+    statChip('100s', bat.hundreds),
+    statChip('4s', bat.fours),
+    statChip('6s', bat.sixes),
+    statChip('Ducks', bat.ducks)
+  ].join('')) : '';
+
+  const bowlingSection = bowl ? section('Bowling', '#9B5DE5', [
+    statChip('Wickets', bowl.wickets),
+    statChip('Overs', bowl.overs),
+    statChip('Economy', bowl.economy),
+    statChip('Average', bowl.average),
+    statChip('Strike Rate', bowl.strikeRate),
+    statChip('Best', bowl.bestBowling),
+    statChip('3W', bowl.threeW),
+    statChip('4W', bowl.fourW),
+    statChip('5W', bowl.fiveW)
+  ].join('')) : '';
+
+  const fieldingSection = (profile.hasFielding || fld.catches + fld.stumpings + fld.runOuts >= 0) ? section('Fielding', '#00E676', [
+    statChip('Catches', fld.catches),
+    statChip('Stumpings', fld.stumpings),
+    statChip('Run Outs', fld.runOuts)
+  ].join('')) : '';
+
+  const logRows = profile.matchLog.length ? profile.matchLog.slice(0, 12).map((row) => `
+    <tr>
+      <td><span style="color:var(--border)">#M${row.matchId}</span></td>
+      <td><span class="tbadge" style="background:${row.type === 'bat' ? '#FF822A30' : '#9B5DE530'};color:${row.type === 'bat' ? '#FF822A' : '#9B5DE5'};border:1px solid ${row.type === 'bat' ? '#FF822A60' : '#9B5DE560'}">${row.type === 'bat' ? 'BAT' : 'BOWL'}</span></td>
+      <td style="text-align:left;color:var(--silver);font-size:12px">vs ${row.vsName}</td>
+      <td><span style="font-family:'Bebas Neue',cursive;font-size:20px;color:var(--white)">${row.figures}</span></td>
+      <td style="font-size:11px;color:var(--silver)">${row.detail}</td>
+      <td><span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;color:${row.result === 'W' ? '#00e676' : row.result === 'L' ? '#ff5252' : 'var(--silver)'}">${row.result}</span></td>
+    </tr>`).join('') : `<tr><td colspan="6" style="padding:20px;color:var(--silver);font-size:13px">No scorecard appearances in the current filter scope.</td></tr>`;
+
+  const emptyNote = (!bat && !bowl && !profile.matchLog.length)
+    ? `<p class="cc-profile-empty">No batting or bowling data for this player within the selected filters.</p>`
+    : '';
+
+  el.innerHTML = `
+    <div class="cc-panel">
+      <div class="cc-profile-hero" style="background:linear-gradient(135deg,${pri}22 0%,var(--card) 100%)">
+        <div class="cc-profile-av" style="background:linear-gradient(135deg,${pri},${sec});border:3px solid ${sec}">${ini(playerName)}</div>
+        <div class="cc-profile-info">
+          <div class="cc-profile-name">${playerName}</div>
+          <div class="cc-profile-team">${tm.name || playerTeam} · ${playerTeam}</div>
+          <div class="cc-profile-tags">
+            <span class="rbadge ${roster ? rbc(roster.role) : 'b-ar'}">${role}</span>
+            ${roster?.women ? '<span class="women-pip">♀</span>' : ''}
+            <span class="sqchip" style="color:${rc(overall)}">OVR ${overall}</span>
+          </div>
+        </div>
+        <div class="cc-profile-scope">
+          <div class="cc-meta-lbl">Filter scope</div>
+          <div class="cc-scope-line">${ctx.seasonLabel}</div>
+          <div class="cc-scope-line">${ctx.matchFilterLabel}</div>
+          <div class="cc-scope-line">${ctx.completedCount} completed matches</div>
+        </div>
+      </div>
+      ${emptyNote}
+      ${battingSection}
+      ${bowlingSection}
+      ${fieldingSection}
+      <div class="cc-profile-section">
+        <div class="cc-section-title" style="color:var(--gold)">Recent Match Log</div>
+        <div class="lb-wrap" style="padding:0 0 8px">
+          <table class="lb">
+            <thead><tr>
+              <th>Match</th><th>Type</th><th style="text-align:left">Opposition</th><th>Figures</th><th>Detail</th><th>Result</th>
+            </tr></thead>
+            <tbody>${logRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderCCPvP(el, ctx) {

@@ -142,6 +142,31 @@ table.lb tr:hover td{background:rgba(245,197,24,.03);}
 .cc-placeholder-note{font-size:12px;line-height:1.6;color:var(--silver);margin:0;opacity:.85;}
 .cc-placeholder-note code{font-family:ui-monospace,monospace;font-size:11px;color:var(--gold);}
 .h2hpage .filters-bar .fsel{min-width:180px;}
+.cc-empty{padding:48px 28px 56px;text-align:center;}
+.cc-empty-icon{font-size:42px;margin-bottom:12px;opacity:.6;}
+.cc-empty-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;margin-bottom:10px;}
+.cc-empty-text{font-size:14px;color:var(--silver);line-height:1.65;max-width:480px;margin:0 auto 10px;}
+.cc-empty-note{font-size:12px;color:var(--silver);opacity:.75;}
+.cc-profile-hero{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;padding:24px;border-bottom:1px solid var(--border);}
+.cc-profile-av{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:34px;color:#fff;flex-shrink:0;}
+.cc-profile-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px;line-height:1.1;}
+.cc-profile-team{font-size:12px;color:var(--silver);letter-spacing:1px;margin-top:4px;text-transform:uppercase;}
+.cc-profile-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center;}
+.cc-profile-scope{text-align:right;min-width:140px;}
+.cc-scope-line{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--silver);margin-top:2px;}
+.cc-profile-section{padding:20px 24px 8px;border-bottom:1px solid var(--border);}
+.cc-profile-section:last-child{border-bottom:none;padding-bottom:20px;}
+.cc-section-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;}
+.cc-stat-grid{display:flex;flex-wrap:wrap;gap:10px;}
+.cc-stat-grid .hstat{min-width:72px;flex:1 1 72px;}
+.cc-profile-empty{padding:16px 24px;font-size:13px;color:var(--silver);border-bottom:1px solid var(--border);}
+
+@media(max-width:720px){
+  .cc-profile-hero{grid-template-columns:1fr;text-align:center;}
+  .cc-profile-av{margin:0 auto;}
+  .cc-profile-tags{justify-content:center;}
+  .cc-profile-scope{text-align:center;margin-top:8px;}
+}
 
 /* ══════════════ OVERLAY GLASS ANIMATIONS ══════════════ */
 /* ══════════════ OVERLAY GLASS ANIMATIONS ══════════════ */

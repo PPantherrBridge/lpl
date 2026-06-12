@@ -14,6 +14,7 @@ import {
   aggregateFieldingStats,
   aggregatePotmStats,
   aggregateTeamStats,
+  buildPlayerProfileStats,
   buildPlayerStatsBundle,
   computeMvpScores,
   getBestSpell,
@@ -457,6 +458,88 @@ assertEqual(playoffOnly.length, 1, 'getFilteredResults finals');
 assertEqual(leagueOnly.every((m) => !m.playoffRound), true, 'getFilteredResults league');
 
 assertEqual(normalizePlayerName('MohanGT', 'GT'), 'MohanR', 'normalizePlayerName');
+
+function testFieldingDismissals() {
+  const results = [
+    {
+      id: 501,
+      t1: 'MI',
+      t2: 'RCB',
+      winner: 'MI',
+      scorecard: {
+        innings: [{
+          team: 'RCB',
+          batters: [
+            { n: 'Enoch', dis: 'c Adith b Sachin', r: 10, b: 5, sr: '200.00' },
+            { n: 'Monish', dis: 'c x b Shreyans', r: 22, b: 11, sr: '200.00' },
+            { n: 'Harsha', dis: 'st Adith b Sachin', r: 8, b: 6, sr: '133.33' },
+            { n: 'Naveen', dis: 'run out (Sachin)', r: 5, b: 3, sr: '166.67' }
+          ],
+          bowlers: [
+            { n: 'Shreyans', o: '2', r: 20, w: 1, econ: '10.00' },
+            { n: 'Sachin', o: '2', r: 15, w: 1, econ: '7.50' }
+          ]
+        }]
+      }
+    }
+  ];
+
+  const fielding = aggregateFieldingStats(results, {});
+  const adith = fielding.find((p) => p.n === 'Adith' && p.team === 'MI');
+  const shreyans = fielding.find((p) => p.n === 'Shreyans' && p.team === 'MI');
+  const sachin = fielding.find((p) => p.n === 'Sachin' && p.team === 'MI');
+  const phantomX = fielding.find((p) => p.n === 'x');
+
+  assertEqual(adith?.catches, 1, 'fielding: c Fielder b Bowler catch');
+  assertEqual(adith?.stumpings, 1, 'fielding: stumping');
+  assertEqual(sachin?.runOuts, 1, 'fielding: run out (Fielder)');
+  assertEqual(shreyans?.catches, 1, 'fielding: c x b Bowler credits bowler catch');
+  assertEqual(phantomX, undefined, 'fielding: c x b does not credit fielder x');
+}
+
+function testPlayerProfile() {
+  const results = [
+    {
+      id: 601,
+      t1: 'RCB',
+      t2: 'MI',
+      winner: 'MI',
+      potm: 'Bhuvan',
+      scorecard: {
+        innings: [
+          {
+            team: 'RCB',
+            batters: [
+              { n: 'Enoch', dis: 'b Shreyans', r: 55, b: 30, sr: '183.33' },
+              { n: 'Monish', dis: 'not out', r: 12, b: 8, sr: '150.00', notout: true }
+            ],
+            bowlers: [{ n: 'Shreyans', o: '4', r: 40, w: 1, econ: '10.00' }]
+          },
+          {
+            team: 'MI',
+            batters: [{ n: 'Bhuvan', dis: 'not out', r: 40, b: 20, sr: '200.00', notout: true }],
+            bowlers: [
+              { n: 'Enoch', o: '2', r: 25, w: 0, econ: '12.50' },
+              { n: 'Monish', o: '2', r: 20, w: 3, econ: '10.00' }
+            ]
+          }
+        ]
+      }
+    }
+  ];
+
+  const profile = buildPlayerProfileStats(results, {}, 'Monish', 'RCB', {});
+  assertEqual(profile.batting?.runs, 12, 'profile batting runs');
+  assertEqual(profile.batting?.fifties, 0, 'profile no fifty');
+  assertEqual(profile.bowling?.wickets, 3, 'profile bowling wickets');
+  assertEqual(profile.bowling?.threeW, 1, 'profile 3W spell');
+  assertEqual(profile.matchLog.length, 2, 'profile match log entries');
+}
+
+testFieldingDismissals();
+console.log('  fielding dismissal formats OK');
+testPlayerProfile();
+console.log('  player profile OK');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

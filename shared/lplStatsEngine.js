@@ -288,6 +288,13 @@ function parseFieldingFromDismissal(dis, bowlingTeam, normalize) {
   const text = String(dis || '').trim();
   if (!text || text === 'not out') return null;
 
+  // Caught and bowled — credit catch to the bowler (e.g. "c x b Jasprit Bumrah")
+  const cAndBMatch = text.match(/^c\s+x\s+b\s+(.+)$/i);
+  if (cAndBMatch) {
+    const bowler = normalize(cAndBMatch[1].trim(), bowlingTeam);
+    return { type: 'catch', fielder: bowler };
+  }
+
   const catchMatch = text.match(/^c\s+(.+?)\s+b\s+/i);
   if (catchMatch) {
     const fielder = normalize(catchMatch[1].trim(), bowlingTeam);
@@ -575,6 +582,154 @@ export function computeMvpScores(results, teamMeta = {}, options = {}) {
 
     return player;
   }).sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Detailed player profile built from aggregate stats plus innings-level scans.
+ */
+export function buildPlayerProfileStats(results, teamMeta, playerName, playerTeam, options = {}) {
+  const filtered = getFilteredResults(results, options);
+  const batRows = aggregateBattingStats(filtered, teamMeta, options);
+  const bowlRows = aggregateBowlingStats(filtered, teamMeta, options);
+  const fieldRows = aggregateFieldingStats(filtered, teamMeta, options);
+
+  const battingRow = batRows.find((p) => p.n === playerName && p.team === playerTeam) || null;
+  const bowlingRow = bowlRows.find((p) => p.n === playerName && p.team === playerTeam) || null;
+  const fieldingRow = fieldRows.find((p) => p.n === playerName && p.team === playerTeam) || null;
+
+  const batMatches = new Set();
+  const matchLog = [];
+  let thirties = 0;
+  let fifties = 0;
+  let hundreds = 0;
+  let ducks = 0;
+  let fours = 0;
+  let sixes = 0;
+  let hasBoundaryData = false;
+  let spells3w = 0;
+  let spells4w = 0;
+  let spells5w = 0;
+
+  for (const match of filtered) {
+    if (!match.scorecard || match.winner === 'TBD') continue;
+
+    const playerInMatch = match.t1 === playerTeam || match.t2 === playerTeam;
+    const result = !playerInMatch ? '—' : (match.winner === playerTeam ? 'W' : 'L');
+
+    for (const inn of match.scorecard.innings) {
+      if (inn.team === playerTeam) {
+        for (const batter of inn.batters || []) {
+          const name = normalizePlayerName(batter.n, inn.team);
+          if (name !== playerName) continue;
+
+          batMatches.add(match.id);
+          const runs = batter.r || 0;
+          if (!batter.notout && runs === 0) ducks += 1;
+          if (runs >= 100) hundreds += 1;
+          else if (runs >= 50) fifties += 1;
+          else if (runs >= 30) thirties += 1;
+
+          if (batter.fours != null || batter.f4 != null) {
+            fours += batter.fours ?? batter.f4 ?? 0;
+            hasBoundaryData = true;
+          }
+          if (batter.sixes != null || batter.f6 != null) {
+            sixes += batter.sixes ?? batter.f6 ?? 0;
+            hasBoundaryData = true;
+          }
+
+          const opp = inn.team === match.t1 ? match.t2 : match.t1;
+          const oppMeta = teamMeta[opp] || {};
+          matchLog.push({
+            matchId: match.id,
+            type: 'bat',
+            vs: opp,
+            vsName: oppMeta.name || opp,
+            figures: `${runs}${batter.notout ? '*' : ''} (${batter.b})`,
+            detail: batter.notout ? 'not out' : (batter.dis || '—'),
+            result
+          });
+        }
+      }
+
+      const bowlTeam = getBowlingTeam(match, inn.team);
+      if (bowlTeam === playerTeam) {
+        for (const bowler of inn.bowlers || []) {
+          const name = normalizePlayerName(bowler.n, bowlTeam);
+          if (name !== playerName) continue;
+
+          const wkts = bowler.w || 0;
+          if (wkts >= 5) spells5w += 1;
+          else if (wkts === 4) spells4w += 1;
+          else if (wkts === 3) spells3w += 1;
+
+          const batTeam = inn.team;
+          const batMeta = teamMeta[batTeam] || {};
+          matchLog.push({
+            matchId: match.id,
+            type: 'bowl',
+            vs: batTeam,
+            vsName: batMeta.name || batTeam,
+            figures: `${wkts}/${bowler.r} (${bowler.o})`,
+            detail: `Econ ${bowler.econ || '—'}`,
+            result
+          });
+        }
+      }
+    }
+  }
+
+  matchLog.sort((a, b) => b.matchId - a.matchId);
+
+  const batting = battingRow ? {
+    matches: batMatches.size,
+    innings: battingRow.inns,
+    runs: battingRow.runs,
+    balls: battingRow.balls,
+    average: battingRow.avg,
+    strikeRate: battingRow.srStr,
+    highestScore: `${battingRow.hs}${battingRow.hsNotOut ? '*' : ''}`,
+    thirties,
+    fifties,
+    hundreds,
+    fours: hasBoundaryData ? fours : '—',
+    sixes: hasBoundaryData ? sixes : '—',
+    ducks
+  } : null;
+
+  let bowling = null;
+  if (bowlingRow) {
+    const bowlAvg = bowlingRow.wkts > 0 ? (bowlingRow.runs / bowlingRow.wkts).toFixed(1) : '—';
+    const bowlBalls = Math.round(bowlingRow.overs * 6);
+    const bowlSr = bowlingRow.wkts > 0 ? (bowlBalls / bowlingRow.wkts).toFixed(1) : '—';
+    bowling = {
+      wickets: bowlingRow.wkts,
+      overs: bowlingRow.ovStr,
+      economy: bowlingRow.econStr,
+      average: bowlAvg,
+      strikeRate: bowlSr,
+      bestBowling: bowlingRow.bestStr,
+      threeW: spells3w,
+      fourW: spells4w,
+      fiveW: spells5w
+    };
+  }
+
+  const fielding = {
+    catches: fieldingRow?.catches || 0,
+    stumpings: fieldingRow?.stumpings || 0,
+    runOuts: fieldingRow?.runOuts || 0
+  };
+
+  return {
+    batting,
+    bowling,
+    fielding,
+    matchLog,
+    hasBatting: !!batting,
+    hasBowling: !!bowling,
+    hasFielding: fielding.catches + fielding.stumpings + fielding.runOuts > 0
+  };
 }
 
 /**
