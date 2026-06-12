@@ -884,21 +884,18 @@ function setStat(idx, btn) {
   renderStat();
 }
 
-// ── Player name normalization — collapses old/renamed names into canonical ones ──
-// Key format: 'oldName|team'  →  canonical name string
-// Team-scoped so e.g. 'Mohan|GT' never affects 'Mohan|RCB'.
-const PLAYER_CANONICAL_MAP = {
-  'ShreyanshLSG|LSG': 'ShreyanshP',
-  'ShreyanshMI|MI':   'ShreyanshS',
-  'Vikas|MI':         'VikasD',
-  'VikasCSK|CSK':     'Vikas',
-  'MohanGT|GT':       'MohanR',
-  'Mohan|GT':         'MohanR',
-  'PavanGT|GT':       'Pavan',
-  'PavanSRH|SRH':     'PavanP',
-};
+// ── Unified statistics engine (shared/lplStatsEngine.js) ─────────────────────
+function statsEngine() {
+  if (!window.LPLStatsEngine) throw new Error('LPL statistics engine is not loaded.');
+  return window.LPLStatsEngine;
+}
+
+function getFilteredResults(options) {
+  return statsEngine().getFilteredResults(RESULTS, options || {});
+}
+
 function normalizePlayerName(name, team) {
-  return PLAYER_CANONICAL_MAP[name + '|' + team] || name;
+  return statsEngine().normalizePlayerName(name, team);
 }
 
 // ── Stat cache cleanup — clears only derived/generated caches, never raw match data ──
@@ -907,150 +904,12 @@ function clearStatCaches() {
   SAFE_TO_CLEAR.forEach(k => { try { localStorage.removeItem('lpl_' + k); } catch(e){} });
 }
 
-// ── Build cumulative player stats from RESULTS scorecard data ────────────────
 function buildPlayerStats() {
-  // batting: {name→{team,runs,balls,inns,notOuts,hs,hsNotOut,fours,sixes}}
-  // bowling: {name→{team,overs,runs,wkts,inns}}
-  const bat = {}, bowl = {};
-
-  for (const m of RESULTS) {
-    if (!m.scorecard) continue;
-    for (const inn of m.scorecard.innings) {
-      const team = inn.team;
-      // batting
-      for (const b of (inn.batters||[])) {
-        const fixedName = normalizePlayerName(b.n, team);
-        const k = fixedName + '|' + team;
-        if (!bat[k]) bat[k] = {n:fixedName, team, runs:0, balls:0, inns:0, notOuts:0, hs:0, hsNotOut:false};
-        bat[k].runs   += b.r;
-        bat[k].balls  += b.b;
-        bat[k].inns++;
-        if (b.notout) bat[k].notOuts++;
-        if (b.r > bat[k].hs || (b.r === bat[k].hs && b.notout)) {
-          bat[k].hs = b.r;
-          bat[k].hsNotOut = !!b.notout;
-        }
-      }
-      // bowling — bowlers listed are the OPPOSING team's bowlers
-      // inn.team = batting team; bowlers = fielding team's bowlers
-      // We need to figure out which team bowled — it's the other team in the match
-      const bowlingTeam = (inn.team === m.t1) ? m.t2 : m.t1;
-      for (const bw of (inn.bowlers||[])) {
-        const fixedBwName = normalizePlayerName(bw.n, bowlingTeam);
-        const k = fixedBwName + '|' + bowlingTeam;
-        if (!bowl[k]) bowl[k] = {n:fixedBwName, team:bowlingTeam, overs:0, runs:0, wkts:0, inns:0};
-        // parse overs e.g. "3.4" → 3 + 4/6
-        const ov = String(bw.o);
-        const parts = ov.split('.');
-        const fullOv = parseInt(parts[0]) + (parseInt(parts[1]||0)/6);
-        bowl[k].overs += fullOv;
-        bowl[k].runs  += bw.r;
-        bowl[k].wkts  += bw.w;
-        bowl[k].inns++;
-      }
-    }
-  }
-
-  // convert to arrays, attach team meta
-  const batArr = Object.values(bat).map(b => {
-    const tm = TEAM_META[b.team] || {};
-    const sr = b.balls > 0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
-    const avg = b.inns - b.notOuts > 0 ? (b.runs/(b.inns-b.notOuts)).toFixed(1) : '—';
-    return {...b, sr:parseFloat(sr), srStr:sr, avg, pri:tm.pri||'#444', sec:tm.sec||'#fff', teamName:tm.name||b.team};
-  });
-  const bowlArr = Object.values(bowl).map(b => {
-    const tm = TEAM_META[b.team] || {};
-    const econ = b.overs > 0 ? (b.runs/b.overs).toFixed(2) : '0.00';
-    const ovStr = (() => {
-      const full = Math.floor(b.overs);
-      const frac = Math.round((b.overs - full)*6);
-      return frac ? full+'.'+frac : ''+full;
-    })();
-    return {...b, ovStr, econ:parseFloat(econ), econStr:econ, pri:tm.pri||'#444', sec:tm.sec||'#fff', teamName:tm.name||b.team};
-  });
-
-  return {bat, bowl, batArr, bowlArr};
+  return statsEngine().buildPlayerStatsBundle(getFilteredResults(), TEAM_META);
 }
 
 function computeMvpScores() {
-  const players = {};
-  const addPlayer = (name, team) => {
-    const key = `${name}|${team}`;
-    if (!players[key]) {
-      const tm = TEAM_META[team] || {};
-      players[key] = {
-        n:name, team, teamName:tm.name||team, pri:tm.pri||'#444', sec:tm.sec||'#fff',
-        batRuns:0, balls:0, inns:0, notOuts:0, hs:0, hsNotOut:false,
-        bowOvers:0, bowRuns:0, wkts:0, bowInns:0, bestSpellW:0, bestSpellR:0,
-        matches:new Set(), potmCount:0,
-      };
-    }
-    return players[key];
-  };
-
-  for (const m of RESULTS) {
-    if (!m.scorecard) continue;
-    const matchKey = m.id || `${m.t1}-${m.t2}-${m.date||''}`;
-    for (const inn of m.scorecard.innings) {
-      const battingTeam = inn.team;
-      for (const b of (inn.batters||[])) {
-        const p = addPlayer(normalizePlayerName(b.n, battingTeam), battingTeam);
-        p.batRuns += b.r;
-        p.balls += b.b;
-        p.inns += 1;
-        if (b.notout) p.notOuts += 1;
-        if (b.r > p.hs || (b.r === p.hs && b.notout)) {
-          p.hs = b.r;
-          p.hsNotOut = !!b.notout;
-        }
-        p.matches.add(matchKey);
-      }
-      const bowlingTeam = (inn.team === m.t1) ? m.t2 : m.t1;
-      for (const bw of (inn.bowlers||[])) {
-        const p = addPlayer(normalizePlayerName(bw.n, bowlingTeam), bowlingTeam);
-        const parts = String(bw.o).split('.');
-        const overs = parseInt(parts[0]) + (parseInt(parts[1]||0)/6);
-        p.bowOvers += overs;
-        p.bowRuns += bw.r;
-        p.wkts += bw.w;
-        p.bowInns += 1;
-        if (bw.w > p.bestSpellW || (bw.w === p.bestSpellW && bw.r < p.bestSpellR)) {
-          p.bestSpellW = bw.w;
-          p.bestSpellR = bw.r;
-        }
-        p.matches.add(matchKey);
-      }
-    }
-  }
-
-  const potmCount = {};
-  for (const m of RESULTS) {
-    if (m.potm) potmCount[m.potm] = (potmCount[m.potm] || 0) + 1;
-  }
-
-  return Object.values(players).map(p => {
-    p.potmCount = potmCount[p.n] || 0;
-    p.matches = p.matches.size;
-    p.sr = p.balls > 0 ? (p.batRuns / p.balls * 100) : 0;
-    p.srStr = p.balls > 0 ? p.sr.toFixed(1) : '0.0';
-    p.avg = p.inns - p.notOuts > 0 ? (p.batRuns / (p.inns - p.notOuts)) : 0;
-    p.avgStr = p.inns - p.notOuts > 0 ? p.avg.toFixed(1) : '—';
-    p.econ = p.bowOvers > 0 ? (p.bowRuns / p.bowOvers) : 0;
-    p.econStr = p.bowOvers > 0 ? p.econ.toFixed(2) : '0.00';
-    p.ovStr = (() => {
-      const full = Math.floor(p.bowOvers);
-      const frac = Math.round((p.bowOvers - full)*6);
-      return frac ? `${full}.${frac}` : `${full}`;
-    })();
-    p.bestSpell = p.bestSpellW ? `${p.bestSpellW}/${p.bestSpellR}` : '—';
-
-    const battingPoints = p.batRuns * 1 + (p.avg || 0) * 6 + p.sr / 5 + p.hs * 1.5 + p.notOuts * 4;
-    const bowlingPoints = p.wkts * 12 + Math.max(0, 20 - p.econ) * 3 + p.bowOvers * 1.2 + p.bestSpellW * 5 + (p.bestSpellW >= 4 ? 4 : 0);
-    const matchPoints = p.matches * 3;
-    const potmPoints = p.potmCount * 10;
-    p.score = parseFloat((battingPoints + bowlingPoints + matchPoints + potmPoints).toFixed(1));
-    return p;
-  }).sort((a,b) => b.score - a.score);
+  return statsEngine().computeMvpScores(getFilteredResults(), TEAM_META);
 }
 
 function renderStat() {
@@ -1204,20 +1063,7 @@ function renderPurpleCap(arr) {
 }
 
 function getBestSpell(name, team) {
-  let best = null;
-  for (const m of RESULTS) {
-    if (!m.scorecard) continue;
-    for (const inn of m.scorecard.innings) {
-      const bowlingTeam = inn.team === m.t1 ? m.t2 : m.t1;
-      if (bowlingTeam !== team) continue;
-      for (const bw of (inn.bowlers||[])) {
-        if (bw.n !== name) continue;
-        if (!best || bw.w > best.w || (bw.w === best.w && bw.r < best.r))
-          best = bw;
-      }
-    }
-  }
-  return best ? `${best.w}/${best.r}` : '—';
+  return statsEngine().getBestSpell(name, team, getFilteredResults());
 }
 
 // ── Super Strikers (min 30 balls faced) ───────────────────────────────────────
@@ -1252,18 +1098,7 @@ function renderSuperStrikers(arr) {
 
 // ── Highest Individual Innings ────────────────────────────────────────────────
 function getAllInningsHighs() {
-  const list = [];
-  for (const m of RESULTS) {
-    if (!m.scorecard) continue;
-    for (const inn of m.scorecard.innings) {
-      const tm = TEAM_META[inn.team]||{};
-      for (const b of (inn.batters||[])) {
-        list.push({...b, team:inn.team, matchId:m.id, vs: inn.team===m.t1?m.t2:m.t1,
-          pri:tm.pri||'#444', sec:tm.sec||'#fff', teamName:tm.name||inn.team});
-      }
-    }
-  }
-  return list.sort((a,b) => b.r - a.r);
+  return statsEngine().aggregateBattingInnings(getFilteredResults(), TEAM_META, { sortByRuns: true });
 }
 
 function renderHighestScores(arr) {
@@ -1327,12 +1162,8 @@ function renderMostWickets(arr) {
 function renderMVPs(arr) {
   const sorted = [...arr].sort((a,b) => b.score - a.score).slice(0,15);
 
-  // Recompute sub-scores for display (mirrors computeMvpScores formula)
-  function subScores(p){
-    const bat  = parseFloat((p.batRuns * 1 + (p.avg||0) * 6 + p.sr / 5 + p.hs * 1.5 + p.notOuts * 4).toFixed(1));
-    const bowl = parseFloat((p.wkts * 12 + Math.max(0, 20 - p.econ) * 3 + p.bowOvers * 1.2 + p.bestSpellW * 5 + (p.bestSpellW >= 4 ? 4 : 0)).toFixed(1));
-    const bonus= parseFloat((p.matches * 3 + p.potmCount * 10).toFixed(1));
-    return {bat, bowl, bonus};
+  function subScores(p) {
+    return statsEngine().getMvpScoreBreakdown(p);
   }
 
   const rankColors = ['#FFD700','#C0C0C0','#CD7F32'];
@@ -1466,105 +1297,24 @@ function initStatFilter(){
 // To update: just add the new match to RESULTS. Nothing else needed here.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── helpers shared with season stats ──
-function _batStats(){
-  // Returns array of {n, team, runs, balls, inns, notOuts, hs, hsNotOut}
-  const map={};
-  for(const m of RESULTS){
-    if(!m.scorecard)continue;
-    for(const inn of m.scorecard.innings){
-      for(const b of (inn.batters||[])){
-        const fixedName=normalizePlayerName(b.n,inn.team);
-        const k=fixedName+'|'+inn.team;
-        if(!map[k])map[k]={n:fixedName,team:inn.team,runs:0,balls:0,inns:0,notOuts:0,hs:0,hsNotOut:false,
-          pri:(TEAM_META[inn.team]||{}).pri||'#444',sec:(TEAM_META[inn.team]||{}).sec||'#fff',
-          teamName:(TEAM_META[inn.team]||{}).name||inn.team};
-        const e=map[k];
-        e.runs+=b.r; e.balls+=b.b; e.inns++;
-        if(b.notout)e.notOuts++;
-        if(b.r>e.hs||(b.r===e.hs&&b.notout)){e.hs=b.r;e.hsNotOut=!!b.notout;}
-      }
-    }
-  }
-  return Object.values(map).map(p=>{
-    const sr=p.balls>0?(p.runs/p.balls*100).toFixed(1):'0.0';
-    const denom=p.inns-p.notOuts;
-    return{...p,sr:parseFloat(sr),srStr:sr,avg:denom>0?(p.runs/denom).toFixed(1):'—'};
-  });
+function _batStats() {
+  return statsEngine().aggregateBattingStats(getFilteredResults(), TEAM_META);
 }
 
-function _bowlStats(){
-  const map={};
-  for(const m of RESULTS){
-    if(!m.scorecard)continue;
-    for(const inn of m.scorecard.innings){
-      const bowlTeam=inn.team===m.t1?m.t2:m.t1;
-      for(const bw of (inn.bowlers||[])){
-        const fixedBwName=normalizePlayerName(bw.n,bowlTeam);
-        const k=fixedBwName+'|'+bowlTeam;
-        if(!map[k])map[k]={n:fixedBwName,team:bowlTeam,ovBalls:0,runs:0,wkts:0,inns:0,spells:[],
-          pri:(TEAM_META[bowlTeam]||{}).pri||'#444',sec:(TEAM_META[bowlTeam]||{}).sec||'#fff',
-          teamName:(TEAM_META[bowlTeam]||{}).name||bowlTeam};
-        const e=map[k];
-        const pts=String(bw.o).split('.');
-        e.ovBalls+=parseInt(pts[0])*6+parseInt(pts[1]||0);
-        e.runs+=bw.r; e.wkts+=bw.w; e.inns++;
-        e.spells.push({w:bw.w,r:bw.r});
-      }
-    }
-  }
-  return Object.values(map).map(p=>{
-    const totalOv=p.ovBalls/6;
-    const econ=totalOv>0?(p.runs/totalOv).toFixed(2):'0.00';
-    const full=Math.floor(totalOv),frac=Math.round((totalOv-full)*6);
-    const best=p.spells.reduce((a,b)=>b.w>a.w||(b.w===a.w&&b.r<a.r)?b:a,{w:0,r:999});
-    return{...p,ovStr:frac?full+'.'+frac:''+full,econ:parseFloat(econ),econStr:econ,
-      bestStr:best.w>0?best.w+'/'+best.r:'—'};
-  });
+function _bowlStats() {
+  return statsEngine().aggregateBowlingStats(getFilteredResults(), TEAM_META);
 }
 
-function _allInnings(){
-  const list=[];
-  for(const m of RESULTS){
-    if(!m.scorecard)continue;
-    for(const inn of m.scorecard.innings){
-      const tm=TEAM_META[inn.team]||{};
-      for(const b of (inn.batters||[])){
-        const fixedName=normalizePlayerName(b.n,inn.team);
-        list.push({...b,n:fixedName,team:inn.team,matchId:m.id,vs:inn.team===m.t1?m.t2:m.t1,
-          pri:tm.pri||'#444',sec:tm.sec||'#fff',teamName:tm.name||inn.team});
-      }
-    }
-  }
-  return list;
+function _allInnings() {
+  return statsEngine().aggregateBattingInnings(getFilteredResults(), TEAM_META, { normalizeNames: true });
 }
 
-function _potmCount(){
-  const map={};
-  for(const m of RESULTS){
-    if(!m.potm||m.winner==='TBD')continue;
-    const k=m.potm+'|'+(m.winner==='TBD'?'?':m.winner);
-    if(!map[k])map[k]={n:m.potm,team:m.winner,count:0,details:[]};
-    map[k].count++;
-    map[k].details.push('M'+m.id+': '+m.potmDetail);
-  }
-  return Object.values(map).sort((a,b)=>b.count-a.count);
+function _potmCount() {
+  return statsEngine().aggregatePotmStats(getFilteredResults());
 }
 
-function _teamTotals(){
-  const list=[];
-  for(const m of RESULTS){
-    if(!m.scorecard)continue;
-    for(const inn of m.scorecard.innings){
-      const tm=TEAM_META[inn.team]||{};
-      const score=parseInt(inn.total)||0;
-      const wkts=parseInt((inn.total+'').split('/')[1]||'0');
-      list.push({team:inn.team,score,total:inn.total,overs:inn.overs,
-        vs:inn.team===m.t1?m.t2:m.t1,matchId:m.id,
-        pri:tm.pri||'#444',sec:tm.sec||'#fff',teamName:tm.name||inn.team});
-    }
-  }
-  return list.sort((a,b)=>b.score-a.score);
+function _teamTotals() {
+  return statsEngine().aggregateTeamStats(getFilteredResults(), TEAM_META).teamTotals;
 }
 
 // ── sub-tab state ──
@@ -1730,21 +1480,7 @@ function _recTeamTotals(el){
 
 // 5 — Best Bowling Spells (individual spells, not aggregate)
 function _recBestBowling(el){
-  const spells=[];
-  for(const m of RESULTS){
-    if(!m.scorecard)continue;
-    for(const inn of m.scorecard.innings){
-      const bowlTeam=inn.team===m.t1?m.t2:m.t1;
-      const tm=TEAM_META[bowlTeam]||{};
-      for(const bw of (inn.bowlers||[])){
-        const fixedBwName=normalizePlayerName(bw.n,bowlTeam);
-        if(bw.w>0)spells.push({...bw,n:fixedBwName,team:bowlTeam,vs:inn.team,matchId:m.id,
-          pri:tm.pri||'#444',sec:tm.sec||'#fff',teamName:tm.name||bowlTeam});
-      }
-    }
-  }
-  spells.sort((a,b)=>b.w-a.w||a.r-b.r);
-  const top=spells.slice(0,15);
+  const top=statsEngine().aggregateBowlingSpells(getFilteredResults(), TEAM_META).slice(0,15);
   el.innerHTML=_tbl(
     [{l:'#'},{l:'Bowler',align:'left'},{l:'Team'},{l:'Figures'},{l:'Overs'},{l:'Econ'},{l:'vs'},{l:'Match'}],
     top.map((p,i)=>{

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import markup from './legacy-markup.html?raw';
 import '../services/lplApi.js';
+import * as LPLStatsEngine from '../../../shared/lplStatsEngine.js';
 import { installAdminExtensions } from '../services/adminExtensions.js';
 import { loadScriptOnce } from '../utils/loadScript.js';
 
@@ -14,6 +15,7 @@ export default function LegacyLPLPage() {
 
     async function boot() {
       try {
+        window.LPLStatsEngine = LPLStatsEngine;
         await loadScriptOnce('/legacy/lpl-legacy.js', 'lpl-legacy-runtime');
         if (cancelled) return;
         installAdminExtensions();
